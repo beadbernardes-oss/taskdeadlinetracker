@@ -6,6 +6,8 @@ import { S, setUI, replaceState, setPersistHook, toast } from './store.js';
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 import { syncSchedule } from './push.js';
+import { applyFeed } from './daxiang.js';
+import { S as getState, mutate } from './store.js';
 
 let userId = null;
 let user = null;
@@ -62,7 +64,18 @@ async function connect(u) {
   setPersistHook(schedule);
   listen();
   status('in');
+  await pullFeed();
   syncSchedule().catch(() => {});
+}
+
+// Agenda do Daxiang enviada pelo script do computador
+async function pullFeed(row) {
+  if (!userId) return;
+  if (!row) { const { data } = await sb.from('calendar_feed').select('data, updated_at').eq('user_id', userId).maybeSingle(); row = data; }
+  if (!row || !row.data) return;
+  setUI({ dxSyncedAt: row.data.syncedAt || row.updated_at });
+  const draft = JSON.parse(JSON.stringify(getState()));
+  if (applyFeed(draft, row.data)) mutate((st) => { applyFeed(st, row.data); });
 }
 
 function payload() {
@@ -108,6 +121,7 @@ function listen() {
       version = v;
       replaceState(p.new.data, { silent: true });
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_feed', filter: `user_id=eq.${userId}` }, () => { pullFeed().catch(() => {}); })
     .subscribe();
 }
 
@@ -116,5 +130,6 @@ document.addEventListener('visibilitychange', async () => {
   if (document.hidden || !userId || dirty || pushing) return;
   const { data } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).single();
   if (data && data.version > version) { version = data.version; replaceState(data.data, { silent: true }); }
+  await pullFeed().catch(() => {});
   syncSchedule().catch(() => {}); // recalcula ao voltar (ex.: novo dia)
 });

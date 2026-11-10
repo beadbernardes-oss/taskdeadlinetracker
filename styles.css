@@ -517,3 +517,9 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
   .modal-f { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   .swatches { display: none; }
 }
+
+.hidden-series { margin-top: 10px; font-size: 13px; }
+.hidden-series summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.series-row.dim .series-main b { color: var(--muted); font-weight: 500; }
+.dx-sync { font-size: 12px; color: var(--muted); padding: 4px 8px; border-radius: 99px; background: var(--surface-2); white-space: nowrap; }
+.dx-sync.old { color: var(--warn); }

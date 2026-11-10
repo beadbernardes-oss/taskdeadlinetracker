@@ -230,6 +230,18 @@ export function Kanban() {
 }
 
 // ---------------- REUNIÕES ----------------
+function SeriesRow({ s }) {
+  return html`<div class="series-row">
+    <div class="series-main" onClick=${() => openModal({ type: 'series', id: s.id })}>
+      <b>${s.title}</b><span>${recurText(s)}</span>
+    </div>
+    <label class="switch" title="Eu lidero esta reunião">
+      <input type="checkbox" checked=${s.lead} onChange=${(e) => { const v = e.target.checked; mutate((x) => { x.series.find((y) => y.id === s.id).lead = v; }); }} />
+      <span></span><em>Lead</em>
+    </label>
+  </div>`;
+}
+
 export function Meetings() {
   const st = S(); const u = U(); const now = new Date();
   const from = startOfDay(now);
@@ -241,10 +253,13 @@ export function Meetings() {
     if (!g) { g = { dk, day: o.start, list: [] }; groups.push(g); }
     g.list.push(o);
   }
+  const sorted = st.series.slice().sort((a, b) => b.lead - a.lead || a.title.localeCompare(b.title));
+  const visible = sorted.filter((s) => !s.hidden); const hidden = sorted.filter((s) => s.hidden);
   return html`<div class="view meetings">
     <div class="toolbar">
       <${Seg} small value=${u.leadOnly} onChange=${(v) => setUI({ leadOnly: v })} options=${[{ value: true, label: 'Que eu lidero' }, { value: false, label: 'Todas' }]} />
       <div class="grow"></div>
+      ${u.dxSyncedAt && html`<span class=${`dx-sync ${now - new Date(u.dxSyncedAt) > 6 * H ? 'old' : ''}`} title="Agenda importada do Daxiang pelo seu computador">Daxiang · ${fmtAgo(u.dxSyncedAt)}</span>`}
       <button class="btn btn-sm" onClick=${() => openModal({ type: 'ics' })}><${Icon} n="upload" s=${15} />Importar .ics</button>
       <button class="btn btn-sm btn-primary" onClick=${() => openModal({ type: 'series', id: null })}><${Icon} n="plus" s=${15} />Nova reunião</button>
     </div>
@@ -255,16 +270,13 @@ export function Meetings() {
           : html`<${Empty} text="Nenhuma reunião nos próximos 14 dias. Crie uma ou importe da agenda." icon="calendar" />`}
       </div>
       <div class="col narrow">
-        <${Section} title="Séries" count=${st.series.length} icon="repeat">
-          ${st.series.length ? st.series.slice().sort((a, b) => b.lead - a.lead || a.title.localeCompare(b.title)).map((s) => html`<div class="series-row">
-            <div class="series-main" onClick=${() => openModal({ type: 'series', id: s.id })}>
-              <b>${s.title}</b><span>${recurText(s)}</span>
-            </div>
-            <label class="switch" title="Eu lidero esta reunião">
-              <input type="checkbox" checked=${s.lead} onChange=${(e) => { const v = e.target.checked; mutate((x) => { x.series.find((y) => y.id === s.id).lead = v; }); }} />
-              <span></span><em>Lead</em>
-            </label>
-          </div>`) : html`<${Empty} text="Sem séries." />`}
+        <${Section} title="Séries" count=${visible.length} icon="repeat">
+          ${visible.length ? visible.map((s) => html`<${SeriesRow} s=${s} />`) : html`<${Empty} text="Sem séries." />`}
+          ${hidden.length > 0 && html`<details class="hidden-series"><summary>Ocultas do Tracker (${hidden.length})</summary>
+            <p class="muted small">Compromissos só seus (almoço, deslocamento…) entram aqui. Toque em "Acompanhar" para trazer de volta.</p>
+            ${hidden.map((s) => html`<div class="series-row dim"><div class="series-main" onClick=${() => openModal({ type: 'series', id: s.id })}><b>${s.title}</b><span>${recurText(s)}</span></div>
+              <button class="btn btn-xs" onClick=${() => mutate((x) => { x.series.find((y) => y.id === s.id).hidden = false; })}>Acompanhar</button></div>`)}
+          </details>`}
         <//>
       </div>
     </div>

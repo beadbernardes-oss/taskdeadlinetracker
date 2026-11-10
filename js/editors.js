@@ -372,6 +372,7 @@ export function SeriesModal({ id }) {
   const freqOf = (r) => (!r || r.freq === 'none' ? 'none' : r.freq === 'weekly' && r.interval === 2 ? 'biweekly' : r.freq === 'weekly' && (r.byDay || []).join() === '1,2,3,4,5' ? 'weekdays' : r.freq);
   const [f, setF] = useState({ ...base, freq: freqOf(base.recur), byDay: base.recur?.byDay?.length ? base.recur.byDay : [new Date(base.start).getDay()], until: base.recur?.until || '' });
   const set = (p) => setF((x) => ({ ...x, ...p }));
+  const dx = !!ex?.dx;
   const save = () => {
     if (!f.title.trim()) { toast('Dê um nome para a reunião.'); return; }
     const recur = f.freq === 'none' ? { freq: 'none', exdates: [] }
@@ -381,7 +382,9 @@ export function SeriesModal({ id }) {
       : { freq: f.freq, interval: 1 };
     recur.exdates = ex?.recur?.exdates || [];
     recur.until = f.until ? new Date(`${f.until.slice(0, 10)}T23:59`).toISOString() : null;
-    const data = { title: f.title.trim(), start: f.start, durationMin: +f.durationMin || 30, recur, lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link };
+    const data = dx
+      ? { title: f.title.trim(), lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden }
+      : { title: f.title.trim(), start: f.start, durationMin: +f.durationMin || 30, recur, lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden };
     mutate((s) => {
       if (ex) Object.assign(s.series.find((x) => x.id === id), data);
       else s.series.push({ id: uid(), source: 'manual', ...data });
@@ -389,15 +392,17 @@ export function SeriesModal({ id }) {
     toast(ex ? 'Reunião atualizada.' : 'Reunião criada.'); closeModal();
   };
   const del = () => {
+    if (dx) { mutate((s) => { s.series.find((x) => x.id === id).hidden = true; }); setUI({ modal: null, drawer: null }); toast('Série ocultada (ela continua no Daxiang).'); return; }
     if (!confirm('Excluir esta reunião/série e as pautas dela?')) return;
     mutate((s) => { s.series = s.series.filter((x) => x.id !== id); for (const k of Object.keys(s.occ)) if (k.startsWith(`${id}|`)) delete s.occ[k]; });
     setUI({ modal: null, drawer: null }); toast('Reunião excluída.');
   };
   return html`<${Modal} title=${ex ? 'Editar reunião' : 'Nova reunião'} footer=${html`
-      ${ex && html`<button class="btn btn-ghost danger-txt" onClick=${del}><${Icon} n="trash" s=${15} />Excluir</button>`}<div class="grow"></div>
+      ${ex && html`<button class="btn btn-ghost danger-txt" onClick=${del}><${Icon} n="trash" s=${15} />${dx ? 'Ocultar' : 'Excluir'}</button>`}<div class="grow"></div>
       <button class="btn" onClick=${closeModal}>Cancelar</button><button class="btn btn-primary" onClick=${save}>Salvar</button>`}>
     <${Field} label="Nome"><input value=${f.title} placeholder="Ex.: Weekly Integrações de API" onInput=${(e) => set({ title: e.target.value })} /><//>
-    <div class="grid2">
+    ${dx && html`<div class="callout"><div><b>Sincronizada do Daxiang</b><span>Datas e horários vêm do Daxiang e se atualizam sozinhos. Aqui você ajusta só lead, macrotema e se acompanha no Tracker.</span></div></div>`}
+    ${!dx && html`<div class="grid2">
       <${Field} label=${f.freq === 'none' ? 'Data e hora' : 'Primeira ocorrência'}><input type="datetime-local" value=${toInput(f.start)} onChange=${(e) => { const v = fromInput(e.target.value); if (v) set({ start: v, byDay: f.freq === 'weekly' || f.freq === 'biweekly' ? [...new Set([...f.byDay.filter((d) => d !== new Date(f.start).getDay()), new Date(v).getDay()])] : f.byDay }); }} /><//>
       <${Field} label="Duração"><select value=${f.durationMin} onChange=${(e) => set({ durationMin: +e.target.value })}>${[15, 30, 45, 60, 90, 120].map((m) => html`<option value=${m}>${m} min</option>`)}</select><//>
     </div>
@@ -405,8 +410,9 @@ export function SeriesModal({ id }) {
       <option value="none">Não repete</option><option value="daily">Diária</option><option value="weekdays">Dias úteis</option>
       <option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select><//>
     ${(f.freq === 'weekly' || f.freq === 'biweekly') && html`<div class="days">${[1, 2, 3, 4, 5, 6, 0].map((d) => html`<button type="button" class=${f.byDay.includes(d) ? 'on' : ''} onClick=${() => set({ byDay: f.byDay.includes(d) ? (f.byDay.length > 1 ? f.byDay.filter((x) => x !== d) : f.byDay) : [...f.byDay, d] })}>${WD[d]}</button>`)}</div>`}
-    ${f.freq !== 'none' && html`<${Field} label="Termina em (opcional)"><input type="date" value=${f.until ? dayKey(f.until) : ''} onInput=${(e) => set({ until: e.target.value })} /><//>`}
+    ${f.freq !== 'none' && html`<${Field} label="Termina em (opcional)"><input type="date" value=${f.until ? dayKey(f.until) : ''} onInput=${(e) => set({ until: e.target.value })} /><//>`}`}
     <label class="check strong"><input type="checkbox" checked=${f.lead} onChange=${(e) => set({ lead: e.target.checked })} />Eu lidero esta reunião (vale para todas as ocorrências)</label>
+    <label class="check"><input type="checkbox" checked=${!f.hidden} onChange=${(e) => set({ hidden: !e.target.checked })} />Acompanhar no Tracker (desmarque para ocultar almoço, deslocamento etc.)</label>
     <${Field} label="Participantes"><${PeopleInput} value=${f.participants} suggestions=${people()} onChange=${(v) => set({ participants: v })} /><//>
     <div class="grid2">
       <${Field} label="Macrotema padrão"><${MacroSelect} value=${f.macrotemaId} onChange=${(v) => set({ macrotemaId: v })} /><//>

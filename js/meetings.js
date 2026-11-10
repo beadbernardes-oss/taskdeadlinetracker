@@ -18,6 +18,17 @@ export function expand(series, from, to) {
     if (d >= from && d < to && !ex.has(dayKey(d))) out.push({ key: `${series.id}|${dayKey(d)}`, start: d, end: new Date(+d + dur), series });
   };
   if (!r.freq || r.freq === 'none') { push(start); return out; }
+  // Séries sincronizadas do Daxiang: lista explícita de ocorrências { s: ISO início, m: minutos }
+  if (r.freq === 'dates') {
+    const seen = new Set();
+    for (const x of (r.dates || []).slice().sort((a, b) => (a.s < b.s ? -1 : 1))) {
+      const d = new Date(x.s); const dk = dayKey(d);
+      if (d < from || d >= to || ex.has(dk) || seen.has(dk)) continue;
+      seen.add(dk);
+      out.push({ key: `${series.id}|${dk}`, start: d, end: new Date(+d + (x.m || series.durationMin || 30) * M), series });
+    }
+    return out;
+  }
   const iv = Math.max(1, r.interval || 1);
   let guard = 0;
   if (r.freq === 'daily') {
@@ -49,9 +60,9 @@ export function expand(series, from, to) {
   return out;
 }
 
-export function occurrencesBetween(state, from, to, { leadOnly = false } = {}) {
+export function occurrencesBetween(state, from, to, { leadOnly = false, includeHidden = false } = {}) {
   return state.series
-    .filter((s) => !leadOnly || s.lead)
+    .filter((s) => (includeHidden || !s.hidden) && (!leadOnly || s.lead))
     .flatMap((s) => expand(s, from, to))
     .map((o) => ({ ...o, rec: state.occ[o.key] }))
     .sort((a, b) => a.start - b.start);
@@ -79,6 +90,10 @@ export function recurText(s) {
   const r = s.recur || {};
   const t = fmtTime(s.start);
   if (!r.freq || r.freq === 'none') return `Única · ${t}`;
+  if (r.freq === 'dates') {
+    const n = (r.dates || []).filter((x) => new Date(x.s) > new Date()).length;
+    return `Daxiang · ${n > 1 ? `${n} próximas` : n === 1 ? 'próxima marcada' : 'sem próximas'}`;
+  }
   const iv = r.interval || 1;
   if (r.freq === 'daily') return `${iv > 1 ? `A cada ${iv} dias` : 'Diária'} · ${t}`;
   if (r.freq === 'weekly') {
