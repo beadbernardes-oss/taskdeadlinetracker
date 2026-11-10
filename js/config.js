@@ -5,4 +5,4 @@ export const SUPABASE_KEY = 'sb_publishable_SFknDsAFasj5h4aGr-WrXQ_nTEqEnZn';
 export const VAPID_PUBLIC_KEY = 'BPH8nTlJEP8S-QlUEiV7BndPAsi9ROtQOJV68XHxXlAiuZf-QA62TN78W2mBYFryRQHR0ehfeGTaUtxeyjzP6Tg';
 
 // Versão do app: aumente a cada publicação (o app aberto se recarrega ao ver uma versão nova).
-export const APP_VERSION = 4;
+export const APP_VERSION = 5;

@@ -22,6 +22,7 @@ export function prepOps(state, now = new Date()) {
         const patch = {};
         if (!touched && it.deadline !== dl) Object.assign(patch, { deadline: dl, originalDeadline: dl });
         if (it.askSkipWeekend !== !!p.askSkipWeekend) patch.askSkipWeekend = !!p.askSkipWeekend;
+        if (!it.link && p.link) patch.link = p.link; // link adicionado depois na reunião chega na task aberta
         if (Object.keys(patch).length) ops.push({ op: 'upd', id: it.id, patch });
       }
       if (!next) continue;
