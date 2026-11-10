@@ -19,6 +19,7 @@ const PESSOAL = /^\s*\[pessoal\]/i; // eventos marcados [PESSOAL] nunca saem do 
 const NPM_DIR = join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'npm');
 const OA_FULL = join(NPM_DIR, 'oa-skills.cmd');
 const OA = existsSync(OA_FULL) ? `"${OA_FULL}"` : 'oa-skills';
+if (OA === 'oa-skills') appendFileSync(join(ROOT, '.secrets', 'daxiang-sync.log'), `${new Date().toISOString()} aviso: CLI não achado em ${OA_FULL} (APPDATA=${process.env.APPDATA}, node=${process.execPath}, script=${fileURLToPath(import.meta.url)})\n`);
 process.env.PATH = `${NPM_DIR};${dirname(process.execPath)};${process.env.PATH || ''}`;
 const OUT = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
