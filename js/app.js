@@ -3,7 +3,7 @@ import { S, U, setUI, subscribe, load, addItem, toast } from './store.js';
 import { tick, questions, unread, setSW, followUp, isOpen, isMine, agendaCheckDue } from './engine.js';
 import { parseQuick } from './util.js';
 import { Icon, Seg, openNew } from './ui.js';
-import { startCloud, sendLink, signOut } from './cloud.js';
+import { startCloud, sendLink, signOut, verifyCode } from './cloud.js';
 import { Today, Week, Kanban, Meetings, People, Summary } from './views.js';
 import { ItemDrawer, OccDrawer, AskModal, PostponeModal, PautaModal, SeriesModal, IcsModal, SettingsModal, NotifPanel } from './editors.js';
 
@@ -59,6 +59,7 @@ function Login() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState('');
   const go = async (e) => {
     e.preventDefault(); if (!email.trim()) return;
     setBusy(true);
@@ -69,8 +70,10 @@ function Login() {
     <form class="login-card" onSubmit=${go}>
       <span class="logo big"><${Icon} n="check" s=${22} /></span>
       <h2>Tracker</h2><p class="muted">Integrações de API</p>
-      ${u.cloud === 'loading' ? html`<p class="muted">Conectando…</p>` : sent ? html`<div class="callout hot"><div><b>Link enviado</b><span>Abra o e-mail neste aparelho e toque no link para entrar.</span></div></div>
-        <button type="button" class="btn btn-ghost btn-sm" onClick=${() => setSent(false)}>Usar outro e-mail</button>` : html`
+      ${u.cloud === 'loading' ? html`<p class="muted">Conectando…</p>` : sent ? html`<div class="callout hot"><div><b>E-mail enviado</b><span>Digite o código de 6 dígitos do e-mail. No computador, você também pode tocar no link.</span></div></div>
+        <label class="field"><span class="field-l">Código</span><input inputmode="numeric" autocomplete="one-time-code" maxlength="10" value=${code} onInput=${(e) => setCode(e.target.value.replace(/\D/g, ''))} /></label>
+        <button type="button" class="btn btn-primary btn-lg" disabled=${busy || code.length < 6} onClick=${async () => { setBusy(true); try { await verifyCode(email.trim(), code); } catch (err) { toast(`Código inválido ou expirado: ${err.message}`); } setBusy(false); }}>Entrar</button>
+        <button type="button" class="btn btn-ghost btn-sm" onClick=${() => { setSent(false); setCode(''); }}>Usar outro e-mail</button>` : html`
         <label class="field"><span class="field-l">Seu e-mail</span><input type="email" autocomplete="email" value=${email} onInput=${(e) => setEmail(e.target.value)} required /></label>
         <button class="btn btn-primary btn-lg" disabled=${busy}>${busy ? 'Enviando…' : 'Receber link de acesso'}</button>
         ${u.cloud === 'error' && html`<p class="warn-txt">${u.cloudError}</p>`}`}

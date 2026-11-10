@@ -33,6 +33,12 @@ export async function sendLink(email) {
   if (error) throw error;
 }
 
+// Código de 6 dígitos do e-mail (necessário no app instalado do iPhone, que não recebe o link)
+export async function verifyCode(email, token) {
+  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  if (error) throw error;
+}
+
 export async function signOut() { await sb.auth.signOut(); }
 
 async function connect(u) {
