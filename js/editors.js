@@ -173,6 +173,7 @@ function AgendaRow({ k, a }) {
         <option value="">Sem macrotema</option>${S().macrotemas.map((m) => html`<option value=${m.id}>${m.name}</option>`)}
       </select>
       ${a.carriedFrom && html`<span class="flag warn">Veio de ${fmtShort(a.carriedFrom + 'T12:00')}</span>`}
+      ${a.carriedTo && !a.discussed && html`<span class="flag">Passou para ${fmtShort(a.carriedTo.split('|')[1] + 'T12:00')}</span>`}
       ${(a.links || []).map((l, i) => html`<span class="doclink"><a href=${l.url} target="_blank" rel="noopener"><${Icon} n="link" s=${12} />${l.label}</a>
         <button aria-label="Remover link" onClick=${() => updateAgenda(k, a.id, { links: a.links.filter((_, j) => j !== i) })}><${Icon} n="x" s=${11} /></button></span>`)}
       ${!adding && html`<button class="btn btn-ghost btn-xs" onClick=${() => setAdding(true)}><${Icon} n="link" s=${12} />Link de documento</button>`}
@@ -260,7 +261,7 @@ export function OccDrawer({ k }) {
       ${rec.closed ? html`<span class="muted">Reunião encerrada.</span>` : html`<button class="btn btn-primary" onClick=${() => {
         updateOcc(k, { closed: true });
         toast(pendingCount && nx ? `${pendingCount} pauta${pendingCount > 1 ? 's' : ''} movida${pendingCount > 1 ? 's' : ''} para ${fmtShort(nx.start)}.` : 'Reunião encerrada.');
-        import('./engine.js').then((m) => m.tick());
+        import('./engine.js').then((m) => m.tick(new Date(), { force: k }));
       }}><${Icon} n="check" s=${16} />Encerrar reunião</button>`}
     </footer>`}
   </div>`;

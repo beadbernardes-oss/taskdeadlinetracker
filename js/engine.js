@@ -85,7 +85,10 @@ function osNotify(n) {
   } catch { /* sem suporte */ }
 }
 
-export function tick(now = new Date()) {
+// Pauta que ainda precisa ir para a próxima reunião
+const needsCarry = (a) => !a.discussed && !a.carriedTo && (a.text || '').trim();
+
+export function tick(now = new Date(), { force } = {}) {
   const state = S(); const s = state.settings;
   const fire = []; const carry = [];
   const last = (k) => (state.log[k] ? new Date(state.log[k]) : null);
@@ -142,12 +145,18 @@ export function tick(now = new Date()) {
     }
   }
   // 4) Pautas não discutidas passam para a próxima ocorrência
+  // Vale para cada pauta individualmente: uma pauta escrita depois do fim da reunião também passa.
+  // Não mexe na reunião aberta na tela (para não copiar texto pela metade), exceto ao tocar em "Encerrar".
+  const d = U().drawer; const openKey = d && d.type === 'occ' ? d.key : null;
   for (const [key, rec] of Object.entries(state.occ)) {
-    if (rec.carried) continue;
+    if (!(rec.agenda || []).some(needsCarry)) continue;
     const o = occurrenceByKey(state, key);
     if (!o) continue;
     if (o.end > now && !rec.closed) continue;
-    carry.push(o);
+    if (key === openKey && key !== force) continue;
+    const nx = nextOccurrence(o.series, o.end);
+    if (!nx) continue;
+    carry.push({ o, nx });
   }
 
   if (!fire.length && !carry.length) return;
@@ -158,12 +167,10 @@ export function tick(now = new Date()) {
       osNotify(n);
     }
     st.notifs = st.notifs.slice(0, 80);
-    for (const o of carry) {
+    for (const { o, nx } of carry) {
       const rec = ensureOcc(st, o.key); rec.carried = true;
-      const pending = rec.agenda.filter((a) => !a.discussed && (a.text || '').trim());
+      const pending = rec.agenda.filter(needsCarry);
       if (!pending.length) continue;
-      const nx = nextOccurrence(o.series, o.end);
-      if (!nx) continue;
       const nrec = ensureOcc(st, nx.key);
       for (const a of pending) {
         if (nrec.agenda.some((x) => x.carriedId === a.id)) continue;
