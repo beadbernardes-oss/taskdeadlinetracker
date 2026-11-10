@@ -173,6 +173,19 @@ load();
 render(html`<${App} />`, document.getElementById('root'));
 startCloud().catch((e) => setUI({ cloud: 'error', cloudError: e.message }));
 
+// Atualiza sozinho quando há versão nova publicada (evita uma janela antiga lendo dados novos)
+import { APP_VERSION } from './config.js';
+async function checkVersion() {
+  try {
+    const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+    const { v } = await r.json();
+    if (v > APP_VERSION) location.reload();
+  } catch { /* offline: tenta depois */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+setInterval(checkVersion, 10 * 60 * 1000);
+checkVersion();
+
 function openRef(r) {
   if (!r) return;
   if (r.type === 'ask') setUI({ askSnoozeUntil: 0, askFocus: r.id, modal: null });

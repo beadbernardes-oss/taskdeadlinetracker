@@ -184,7 +184,8 @@ export function people() {
   const map = new Map();
   const add = (n) => { const k = nameKey(n); if (k && !map.has(k)) map.set(k, normName(n)); };
   state.items.forEach((i) => { if (i.owner === 'other') add(i.ownerName); (i.stakeholders || []).forEach(add); });
-  state.series.forEach((s) => (s.participants || []).forEach(add));
+  // Participantes vindos do Daxiang não entram: só reuniões que você cadastrou à mão
+  state.series.forEach((s) => { if (!s.dx && s.source !== 'daxiang') (s.participants || []).forEach(add); });
   return [...map.values()].sort((a, b) => a.localeCompare(b));
 }
 

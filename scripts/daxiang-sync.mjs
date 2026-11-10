@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, appendFileSync, existsSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { homedir } from 'node:os';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MIS = 'beatrizbernardes';
@@ -13,6 +14,12 @@ const PAST_DAYS = 7, FUTURE_DAYS = 56, CHUNK_DAYS = 7;
 const ENDPOINT = 'https://bskbumrpbbyujlutlipa.supabase.co/functions/v1/dx-ingest';
 const LOG = join(ROOT, '.secrets', 'daxiang-sync.log');
 const DRY = process.argv.includes('--dry');
+const PESSOAL = /^\s*\[pessoal\]/i; // eventos marcados [PESSOAL] nunca saem do computador
+// Caminho completo do CLI (a tarefa agendada do Windows não tem a pasta do npm no PATH)
+const NPM_DIR = join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'npm');
+const OA_FULL = join(NPM_DIR, 'oa-skills.cmd');
+const OA = existsSync(OA_FULL) ? `"${OA_FULL}"` : 'oa-skills';
+process.env.PATH = `${NPM_DIR};${dirname(process.execPath)};${process.env.PATH || ''}`;
 const OUT = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
 function log(msg) {
@@ -32,7 +39,7 @@ const dayStart = (d) => { const s = local(d).slice(0, 10); return new Date(`${s}
 function cli(args) {
   let out;
   for (let tryN = 1; ; tryN++) { // só leitura: pode tentar de novo se a rede falhar
-    try { out = execFileSync('oa-skills', ['calendar-mcp', ...args, '--mis', MIS, '--raw'], { encoding: 'utf8', shell: true, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 }); break; }
+    try { out = execFileSync(OA, ['calendar-mcp', ...args, '--mis', MIS, '--raw'], { encoding: 'utf8', shell: true, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 }); break; }
     catch (e) { if (tryN >= 3) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000 * tryN); }
   }
   const j = JSON.parse(out.slice(out.indexOf('{')));
@@ -69,6 +76,7 @@ async function main() {
   const events = [];
   for (const e of raw) {
     if (seen.has(e.eventId)) continue; seen.add(e.eventId);
+    if (PESSOAL.test(e.title || '')) continue;
     const s = new Date(e.startTime);
     if (s < from || s >= to) continue;
     const people = (e.attendUserInfoList || []).filter((p) => p.mis !== MIS).map((p) => (p.name || p.mis || '').replace(/\s+/g, ' ').trim()).filter(Boolean);

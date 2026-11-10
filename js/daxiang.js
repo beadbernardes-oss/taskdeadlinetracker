@@ -16,8 +16,10 @@ export function applyFeed(state, feed) {
   const inWin = (iso) => { const d = new Date(iso); return d >= from && d < to; };
 
   // Agrupa ocorrências por série do Daxiang
+  const ignore = new Set(state.dxIgnore || []);
   const groups = new Map();
   for (const e of feed.events) {
+    if (/^\s*\[pessoal\]/i.test(e.title || '') || ignore.has(e.sid)) continue; // pessoal ou excluída por você
     if (!groups.has(e.sid)) groups.set(e.sid, []);
     groups.get(e.sid).push(e);
   }
@@ -58,7 +60,7 @@ export function applyFeed(state, feed) {
     }
     // Só séries criadas pelo Daxiang seguem o nome de lá; as que você cadastrou mantêm o seu nome
     if (!cont && sid === s.dx && s.source === 'daxiang') s.title = last.title || s.title;
-    s.participants = last.people || s.participants;
+    if (s.source === 'daxiang') s.participants = last.people || s.participants;
     if (last.link) s.link = last.link;
     setDates(state, s, groupOf(s).map((e) => ({ s: e.s, m: e.m })), inWin);
     s.start = s.recur.dates[0].s;

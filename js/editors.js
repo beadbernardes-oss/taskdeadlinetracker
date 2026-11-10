@@ -392,13 +392,14 @@ export function SeriesModal({ id }) {
     toast(ex ? 'Reunião atualizada.' : 'Reunião criada.'); closeModal();
   };
   const del = () => {
-    if (dx) { mutate((s) => { s.series.find((x) => x.id === id).hidden = true; }); setUI({ modal: null, drawer: null }); toast('Série ocultada (ela continua no Daxiang).'); return; }
-    if (!confirm('Excluir esta reunião/série e as pautas dela?')) return;
-    mutate((s) => { s.series = s.series.filter((x) => x.id !== id); for (const k of Object.keys(s.occ)) if (k.startsWith(`${id}|`)) delete s.occ[k]; });
+    if (!confirm(dx ? 'Excluir esta reunião do Tracker? Ela continua no Daxiang, mas não volta mais para cá.' : 'Excluir esta reunião/série e as pautas dela?')) return;
+    mutate((s) => {
+      if (dx) s.dxIgnore = [...new Set([...(s.dxIgnore || []), ex.dx, ...(ex.dxMore || [])])];
+      s.series = s.series.filter((x) => x.id !== id); for (const k of Object.keys(s.occ)) if (k.startsWith(`${id}|`)) delete s.occ[k]; });
     setUI({ modal: null, drawer: null }); toast('Reunião excluída.');
   };
   return html`<${Modal} title=${ex ? 'Editar reunião' : 'Nova reunião'} footer=${html`
-      ${ex && html`<button class="btn btn-ghost danger-txt" onClick=${del}><${Icon} n="trash" s=${15} />${dx ? 'Ocultar' : 'Excluir'}</button>`}<div class="grow"></div>
+      ${ex && html`<button class="btn btn-ghost danger-txt" onClick=${del}><${Icon} n="trash" s=${15} />Excluir</button>`}<div class="grow"></div>
       <button class="btn" onClick=${closeModal}>Cancelar</button><button class="btn btn-primary" onClick=${save}>Salvar</button>`}>
     <${Field} label="Nome"><input value=${f.title} placeholder="Ex.: Weekly Integrações de API" onInput=${(e) => set({ title: e.target.value })} /><//>
     ${dx && html`<div class="callout"><div><b>Sincronizada do Daxiang</b><span>Datas e horários vêm do Daxiang e se atualizam sozinhos. Aqui você ajusta só lead, macrotema e se acompanha no Tracker.</span></div></div>`}
