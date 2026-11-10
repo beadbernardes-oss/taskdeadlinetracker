@@ -11,7 +11,10 @@ export function pushSupport() {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    return { ok: false, reason: ios && !standalone ? 'No iPhone, abra pelo ícone da Tela de Início (Safari → Compartilhar → Adicionar à Tela de Início).' : 'Este navegador não suporta push.' };
+    return { ok: false, reason: ios && !standalone
+      ? 'Você está no navegador, não no app instalado — por isso o iPhone não deixa ativar. No Safari: botão Compartilhar → "Adicionar à Tela de Início" → deixe ligado "Abrir como App Web" → Adicionar. Depois feche o Safari e abra pelo ícone novo (ele abre sem a barra de endereço).'
+      : ios ? 'Este iPhone não aceita alertas de apps da Tela de Início. Atualize o iOS (Ajustes → Geral → Atualização de Software) — precisa ser 16.4 ou mais novo.'
+      : 'Este navegador não suporta push.' };
   }
   return { ok: true };
 }
