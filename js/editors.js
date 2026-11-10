@@ -4,7 +4,7 @@ import {
   addAgendaItem, updateAgenda, removeAgenda, updateOcc, people, newItem, PALETTE, informMessage, clearDemo, hasDemo, replaceState, DEFAULT_SETTINGS,
 } from './store.js';
 import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.js';
-import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere } from './push.js';
+import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere, pushDiagnose } from './push.js';
 import { setPassword } from './cloud.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
@@ -495,16 +495,29 @@ function PasswordBox() {
 function PushBox() {
   const [on, setOn] = useState(pushEnabledHere());
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null); // { ok, text } — fica visível, não some como o aviso rápido
+  const [diag, setDiag] = useState(null);
   const sup = pushSupport();
-  const run = async (fn, ok) => { setBusy(true); try { await fn(); toast(ok); setOn(pushEnabledHere()); } catch (e) { toast(e.message); } setBusy(false); };
-  return html`<div class="notif-perm">
-    <div><b>Alertas neste aparelho</b><span class="muted">${!sup.ok ? sup.reason
-      : on ? 'Ativados. Chegam mesmo com o app fechado, inclusive no fim de semana (respeitando o silêncio).'
-      : 'Ative em cada aparelho onde quer receber: iPhone e computador.'}</span></div>
-    ${sup.ok && (on
-      ? html`<div class="row"><button class="btn btn-sm" disabled=${busy} onClick=${() => run(sendTest, 'Teste enviado. Deve chegar em até 1 minuto.')}>Enviar teste</button>
-          <button class="btn btn-sm btn-ghost" disabled=${busy} onClick=${() => run(disablePush, 'Alertas desativados neste aparelho.')}>Desativar</button></div>`
-      : html`<button class="btn btn-sm btn-primary" disabled=${busy} onClick=${() => run(enablePush, 'Alertas ativados neste aparelho.')}>${busy ? 'Ativando…' : 'Ativar'}</button>`)}
+  const refresh = () => pushDiagnose().then(setDiag).catch(() => {});
+  useEffect(() => { refresh(); }, []);
+  const run = async (fn, ok) => {
+    setBusy(true); setMsg(null);
+    try { await fn(); setMsg({ ok: true, text: ok }); setOn(pushEnabledHere()); } catch (e) { setMsg({ ok: false, text: e.message || String(e) }); }
+    setBusy(false); refresh();
+  };
+  return html`<div class="push-box">
+    <div class="notif-perm">
+      <div><b>Alertas neste aparelho</b><span class="muted">${!sup.ok ? sup.reason
+        : on ? 'Ativados. Chegam mesmo com o app fechado, inclusive no fim de semana (respeitando o silêncio).'
+        : 'Ative em cada aparelho onde quer receber: iPhone e computador.'}</span></div>
+      ${sup.ok && (on
+        ? html`<div class="row"><button class="btn btn-sm" disabled=${busy} onClick=${() => run(sendTest, 'Teste enviado. Deve chegar em até 1 minuto (pode bloquear a tela para ver).')}>Enviar teste</button>
+            <button class="btn btn-sm btn-ghost" disabled=${busy} onClick=${() => run(disablePush, 'Alertas desativados neste aparelho.')}>Desativar</button></div>`
+        : html`<button class="btn btn-sm btn-primary" disabled=${busy} onClick=${() => run(enablePush, 'Alertas ativados neste aparelho.')}>${busy ? 'Ativando…' : 'Ativar'}</button>`)}
+    </div>
+    ${msg && html`<p class=${msg.ok ? 'ok-txt' : 'warn-txt'}>${msg.text}</p>`}
+    ${diag && html`<details class="push-diag"><summary>Diagnóstico</summary>
+      <table>${diag.map(([k, v]) => html`<tr><td>${k}</td><td><b>${v}</b></td></tr>`)}</table></details>`}
   </div>`;
 }
 
