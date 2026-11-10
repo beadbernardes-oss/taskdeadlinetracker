@@ -58,7 +58,16 @@ function search(from, to) {
   return all;
 }
 
+// --login: faz uma consulta com a janela "ligada" ao terminal, para o login da empresa (SSO) aparecer e ser concluído
+function interactiveLogin() {
+  console.log('\nConectando ao Daxiang (se pedir login da empresa, siga as instruções abaixo)...\n');
+  const t = local(new Date());
+  execFileSync(OA, ['calendar-mcp', 'searchSchedule', '--startTime', `"${t.slice(0, 10)} 00:00"`, '--endTime', `"${t.slice(0, 10)} 23:59:59"`, '--mis', MIS], { stdio: 'inherit', shell: true });
+  console.log('\nConectado. Sincronizando (leva alguns minutos)...\n');
+}
+
 async function main() {
+  if (process.argv.includes('--login')) interactiveLogin();
   const tokenFile = join(ROOT, '.secrets', 'daxiang.txt');
   const token = readFileSync(tokenFile, 'utf8').split('TOKEN')[1]?.split('\n').map((s) => s.trim()).find((s) => /^[A-Za-z0-9_-]{40,}$/.test(s));
   if (!token) throw new Error('Token não encontrado em .secrets/daxiang.txt');
