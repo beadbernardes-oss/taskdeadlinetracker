@@ -5,6 +5,7 @@ import {
 } from './store.js';
 import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.js';
 import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere } from './push.js';
+import { setPassword } from './cloud.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
@@ -471,6 +472,26 @@ export function IcsModal() {
   <//>`;
 }
 
+function PasswordBox() {
+  const [pw, setPw] = useState(''); const [pw2, setPw2] = useState(''); const [busy, setBusy] = useState(false);
+  const err = pw && pw.length < 8 ? 'Mínimo de 8 caracteres.' : pw2 && pw !== pw2 ? 'As senhas não conferem.' : '';
+  const save = async () => {
+    setBusy(true);
+    try { await setPassword(pw); setPw(''); setPw2(''); toast('Senha definida. Use-a para entrar no app do iPhone.'); } catch (e) { toast(e.message); }
+    setBusy(false);
+  };
+  return html`<div class="set-sec">
+    <h4>Conta</h4>
+    <p class="muted small">Defina uma senha para entrar no app instalado do iPhone (lá o link do e-mail não funciona).</p>
+    <div class="grid2">
+      <${Field} label="Nova senha"><input type="password" autocomplete="new-password" value=${pw} onInput=${(e) => setPw(e.target.value)} /><//>
+      <${Field} label="Repita a senha"><input type="password" autocomplete="new-password" value=${pw2} onInput=${(e) => setPw2(e.target.value)} /><//>
+    </div>
+    ${err && html`<p class="warn-txt">${err}</p>`}
+    <button class="btn btn-sm btn-primary" disabled=${busy || !pw || !!err || pw !== pw2} onClick=${save}>Salvar senha</button>
+  </div>`;
+}
+
 function PushBox() {
   const [on, setOn] = useState(pushEnabledHere());
   const [busy, setBusy] = useState(false);
@@ -495,6 +516,7 @@ export function SettingsModal() {
   const fileRef = useRef();
   const hours = [...Array(24)].map((_, h) => h);
   return html`<${Modal} title="Configurações" size="lg">
+    <${PasswordBox} />
     <div class="set-sec">
       <h4>Macrotemas</h4>
       <div class="macro-edit">

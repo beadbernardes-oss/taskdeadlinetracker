@@ -33,9 +33,13 @@ export async function sendLink(email) {
   if (error) throw error;
 }
 
-// Código de 6 dígitos do e-mail (necessário no app instalado do iPhone, que não recebe o link)
-export async function verifyCode(email, token) {
-  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+// Senha: necessária no app instalado do iPhone (o link do e-mail abre no Safari, que tem login separado)
+export async function signInPassword(email, password) {
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message);
+}
+export async function setPassword(password) {
+  const { error } = await sb.auth.updateUser({ password });
   if (error) throw error;
 }
 
