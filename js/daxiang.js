@@ -23,6 +23,8 @@ export function applyFeed(state, feed) {
   }
   for (const g of groups.values()) g.sort((a, b) => (a.s < b.s ? -1 : 1));
 
+  // Continuação só vale entre séries que se repetem (2+ ocorrências); desfaz ligações antigas que não cumprem isso
+  for (const x of state.series) if (x.dxMore) x.dxMore = x.dxMore.filter((id) => (groups.get(id) || []).length >= 2 || !groups.has(id));
   const linked = new Set(state.series.filter((s) => s.dx).map((s) => s.dx));
   const ids = (x) => [x.dx, ...(x.dxMore || [])];
   const groupOf = (x) => ids(x).flatMap((id) => groups.get(id) || []);
@@ -104,10 +106,11 @@ function setDates(state, s, fresh, inWin) {
 
 // Série nova no Daxiang que substitui uma antiga (mesmo dia da semana e horário, começa depois que a antiga acabou)
 function matchContinuation(state, evs, groupOf, now) {
+  if (evs.length < 2) return null; // reunião avulsa não é continuação de nada
   const f = new Date(evs[0].s);
   const slot = (d) => `${d.getDay()}-${d.getHours()}:${d.getMinutes()}`;
   const c = state.series.filter((s) => {
-    if (!s.dx || s.hidden) return false;
+    if (!s.dx || s.hidden || (s.recur.dates || []).length < 2) return false;
     const mine = groupOf(s);
     if (mine.some((e) => new Date(e.s) > now && new Date(e.s) >= f)) return false; // a antiga ainda continua
     const last = (s.recur.dates || []).map((x) => new Date(x.s)).filter((d) => d < f).sort((a, b) => b - a)[0];

@@ -30,7 +30,11 @@ const local = (d) => fmt.format(d).replace('T', ' ');
 const dayStart = (d) => { const s = local(d).slice(0, 10); return new Date(`${s}T00:00:00-03:00`); };
 
 function cli(args) {
-  const out = execFileSync('oa-skills', ['calendar-mcp', ...args, '--mis', MIS, '--raw'], { encoding: 'utf8', shell: true, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 });
+  let out;
+  for (let tryN = 1; ; tryN++) { // só leitura: pode tentar de novo se a rede falhar
+    try { out = execFileSync('oa-skills', ['calendar-mcp', ...args, '--mis', MIS, '--raw'], { encoding: 'utf8', shell: true, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 }); break; }
+    catch (e) { if (tryN >= 3) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000 * tryN); }
+  }
   const j = JSON.parse(out.slice(out.indexOf('{')));
   if (j.status?.code !== 0) throw new Error(`Daxiang: ${j.status?.msg || 'erro'}`);
   return j.data;
@@ -48,7 +52,7 @@ function search(from, to) {
 
 async function main() {
   const tokenFile = join(ROOT, '.secrets', 'daxiang.txt');
-  const token = readFileSync(tokenFile, 'utf8').split('TOKEN')[1]?.split('\n').map((s) => s.trim()).find((s) => s.length >= 32);
+  const token = readFileSync(tokenFile, 'utf8').split('TOKEN')[1]?.split('\n').map((s) => s.trim()).find((s) => /^[A-Za-z0-9_-]{40,}$/.test(s));
   if (!token) throw new Error('Token não encontrado em .secrets/daxiang.txt');
 
   const qFrom = new Date(+dayStart(new Date()) - PAST_DAYS * 864e5);
