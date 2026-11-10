@@ -23,7 +23,7 @@ export function buildSchedule(state, now = new Date()) {
     // 1) Minhas entregas: pergunta 24h antes (+ repetição) e depois do prazo
     if (isMine(i) && i.subtype !== 'inform') {
       if (i.ans !== i.deadline) {
-        repeats(alertTime(i.deadline, s), dl, s.repeatHours * H, (t, k) => add(t, {
+        repeats(alertTime(i.deadline, s, i), dl, s.repeatHours * H, (t, k) => add(t, {
           key: `ask:${i.id}:${i.deadline}:${k}`, kind: 'ask', title: 'Vou conseguir entregar no prazo?',
           body: `${i.title} · vence ${fmtDateTime(dl)}`, ref: { type: 'ask', id: i.id },
         }));

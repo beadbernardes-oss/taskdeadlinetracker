@@ -523,3 +523,8 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .series-row.dim .series-main b { color: var(--muted); font-weight: 500; }
 .dx-sync { font-size: 12px; color: var(--muted); padding: 4px 8px; border-radius: 99px; background: var(--surface-2); white-space: nowrap; }
 .dx-sync.old { color: var(--warn); }
+
+.prep-sec { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.prep-sec h4 { margin: 0 0 4px; font-size: 13px; }
+.prep-row { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin: 8px 0; border-radius: 10px; background: var(--surface-2); }
+.prep-row .row .grow { flex: 1; min-width: 0; }

@@ -6,6 +6,7 @@ import {
 import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.js';
 import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere, pushDiagnose } from './push.js';
 import { setPassword } from './cloud.js';
+import { newPrep } from './prep.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
@@ -57,7 +58,7 @@ export function ItemDrawer({ id, preset }) {
   const fu = isNew ? null : followUp(item, st.settings, now);
   const occ = item.fromOcc && occurrenceByKey(st, item.fromOcc);
   const q = !isNew && questions(st, now).find((x) => x.item.id === item.id);
-  const at = item.deadline && isMine(item) && item.subtype !== 'inform' ? alertTime(item.deadline, st.settings) : null;
+  const at = item.deadline && isMine(item) && item.subtype !== 'inform' ? alertTime(item.deadline, st.settings, item) : null;
 
   return html`<div class="drawer-in">
     <header class="drawer-h">
@@ -97,6 +98,9 @@ export function ItemDrawer({ id, preset }) {
       </div>
       <${Field} label="Stakeholders" hint="Quem precisa saber se o prazo mudar"><${PeopleInput} value=${item.stakeholders} suggestions=${ppl} onChange=${(v) => set({ stakeholders: v })} /><//>
       <${Field} label="Notas"><textarea rows="3" value=${item.notes} placeholder="Contexto, links, critérios de aceite…" onInput=${(e) => set({ notes: e.target.value })}></textarea><//>
+      <${Field} label="Link do documento">${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}
+        <input value=${item.link || ''} placeholder="https://…" onInput=${(e) => set({ link: e.target.value.trim() })} /><//>
+      ${item.prep && html`<p class="muted small">↻ Preparação recorrente de “${(st.series.find((x) => x.id === item.prep.sid) || {}).title || 'reunião'}”: a próxima task é criada sozinha depois da reunião.${item.askSkipWeekend ? ' Se a pergunta de prazo cair no fim de semana, ela vem na sexta.' : ''}</p>`}
 
       ${item.subtype === 'inform' && html`<div class="block">
         <div class="block-h"><${Icon} n="msg" s=${16} /><b>Mensagem para os stakeholders</b></div>
@@ -370,7 +374,7 @@ export function SeriesModal({ id }) {
   const ex = id && st.series.find((x) => x.id === id);
   const base = ex || (() => { const d = new Date(Date.now() + H); d.setMinutes(0, 0, 0); return { title: '', start: d.toISOString(), durationMin: 30, recur: { freq: 'weekly', interval: 1, byDay: [d.getDay()], exdates: [] }, lead: true, participants: [], macrotemaId: null, link: '' }; })();
   const freqOf = (r) => (!r || r.freq === 'none' ? 'none' : r.freq === 'weekly' && r.interval === 2 ? 'biweekly' : r.freq === 'weekly' && (r.byDay || []).join() === '1,2,3,4,5' ? 'weekdays' : r.freq);
-  const [f, setF] = useState({ ...base, freq: freqOf(base.recur), byDay: base.recur?.byDay?.length ? base.recur.byDay : [new Date(base.start).getDay()], until: base.recur?.until || '' });
+  const [f, setF] = useState({ ...base, prep: (base.prep || []).map((x) => ({ ...x })), freq: freqOf(base.recur), byDay: base.recur?.byDay?.length ? base.recur.byDay : [new Date(base.start).getDay()], until: base.recur?.until || '' });
   const set = (p) => setF((x) => ({ ...x, ...p }));
   const dx = !!ex?.dx;
   const save = () => {
@@ -382,9 +386,10 @@ export function SeriesModal({ id }) {
       : { freq: f.freq, interval: 1 };
     recur.exdates = ex?.recur?.exdates || [];
     recur.until = f.until ? new Date(`${f.until.slice(0, 10)}T23:59`).toISOString() : null;
+    const prep = f.prep.filter((x) => x.title.trim()).map((x) => ({ ...x, title: x.title.trim(), link: x.link.trim() }));
     const data = dx
-      ? { title: f.title.trim(), lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden }
-      : { title: f.title.trim(), start: f.start, durationMin: +f.durationMin || 30, recur, lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden };
+      ? { title: f.title.trim(), lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden, prep }
+      : { prep, title: f.title.trim(), start: f.start, durationMin: +f.durationMin || 30, recur, lead: f.lead, participants: f.participants, macrotemaId: f.macrotemaId, link: f.link, hidden: !!f.hidden };
     mutate((s) => {
       if (ex) Object.assign(s.series.find((x) => x.id === id), data);
       else s.series.push({ id: uid(), source: 'manual', ...data });
@@ -418,6 +423,22 @@ export function SeriesModal({ id }) {
     <div class="grid2">
       <${Field} label="Macrotema padrão"><${MacroSelect} value=${f.macrotemaId} onChange=${(v) => set({ macrotemaId: v })} /><//>
       <${Field} label="Link / sala"><input value=${f.link} placeholder="Link da chamada" onInput=${(e) => set({ link: e.target.value })} /><//>
+    </div>
+    <div class="prep-sec">
+      <h4>Preparação antes de cada reunião</h4>
+      <p class="muted small">Cria uma task sua para cada ocorrência, com prazo antes da reunião. Ex.: atualizar o documento que será lido na reunião.</p>
+      ${f.prep.map((p, i) => { const up = (patch) => set({ prep: f.prep.map((x, j) => (j === i ? { ...x, ...patch } : x)) }); return html`<div class="prep-row" key=${p.id}>
+        <div class="row"><input class="grow" value=${p.title} placeholder="Ex.: Atualizar doc da OB Weekly" onInput=${(e) => up({ title: e.target.value })} />
+          <button type="button" class="btn btn-icon btn-xs" aria-label="Remover preparação" onClick=${() => set({ prep: f.prep.filter((_, j) => j !== i) })}><${Icon} n="x" s=${14} /></button></div>
+        <input value=${p.link} placeholder="Link do documento (opcional)" onInput=${(e) => up({ link: e.target.value })} />
+        <div class="grid2">
+          <${Field} label="Prazo"><select value=${p.offsetMin} onChange=${(e) => up({ offsetMin: +e.target.value })}>
+            ${[[30, '30 min antes'], [60, '1h antes'], [120, '2h antes'], [1440, '1 dia antes'], [4320, '3 dias antes']].map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select><//>
+          <${Field} label="Prioridade"><${PrioPicker} value=${p.priority} onChange=${(v) => up({ priority: v })} /><//>
+        </div>
+        <label class="check"><input type="checkbox" checked=${p.askSkipWeekend} onChange=${(e) => up({ askSkipWeekend: e.target.checked })} />Se a pergunta "vou conseguir entregar?" cair no fim de semana, perguntar na sexta</label>
+      </div>`; })}
+      <button type="button" class="btn btn-ghost btn-sm add-row" onClick=${() => set({ prep: [...f.prep, newPrep()] })}><${Icon} n="plus" s=${15} />Adicionar preparação</button>
     </div>
   <//>`;
 }

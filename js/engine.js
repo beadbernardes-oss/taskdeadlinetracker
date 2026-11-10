@@ -3,13 +3,20 @@
 import { S, mutate, U } from './store.js';
 import { H, M, D, uid, startOfDay, addDays, dayKey, fmtRel, fmtTime, inQuiet, anticipate } from './util.js';
 import { occurrencesBetween, occurrenceByKey, nextOccurrence, ensureOcc } from './meetings.js';
+import { prepOps, applyPrepOps } from './prep.js';
+import { newItem } from './store.js';
 
 export { inQuiet, anticipate };
 export const isOpen = (i) => i.status !== 'done';
 export const isMine = (i) => i.owner === 'me';
 
 // Momento da pergunta de entrega: deadline - 24h, respeitando o silêncio.
-export const alertTime = (deadlineISO, s) => anticipate(new Date(deadlineISO).getTime() - s.alertLeadHours * H, s);
+export function alertTime(deadlineISO, s, item) {
+  let t = new Date(new Date(deadlineISO).getTime() - s.alertLeadHours * H);
+  // Tasks marcadas para não perguntar no fim de semana: a pergunta vem na sexta, no mesmo horário
+  if (item?.askSkipWeekend) { if (t.getDay() === 6) t = addDays(t, -1); else if (t.getDay() === 0) t = addDays(t, -2); }
+  return anticipate(+t, s);
+}
 
 // Momento da checagem de pauta: início - 60min, respeitando o silêncio (reunião às 8h30 → alerta às 21h da véspera).
 export const preMeetingTime = (start, s) => anticipate(+new Date(start) - s.preMeetingMinutes * M, s);
@@ -28,7 +35,7 @@ export function questions(state = S(), now = new Date()) {
     if (!isMine(i) || !isOpen(i) || !i.deadline || i.subtype === 'inform') continue;
     const dl = new Date(i.deadline);
     if (now >= dl) out.push({ type: 'overdue', item: i });
-    else if (now >= alertTime(i.deadline, state.settings) && i.ans !== i.deadline) out.push({ type: 'ask', item: i });
+    else if (now >= alertTime(i.deadline, state.settings, i) && i.ans !== i.deadline) out.push({ type: 'ask', item: i });
   }
   return out.sort((a, b) => new Date(a.item.deadline) - new Date(b.item.deadline));
 }
@@ -89,6 +96,9 @@ function osNotify(n) {
 const needsCarry = (a) => !a.discussed && !a.carriedTo && (a.text || '').trim();
 
 export function tick(now = new Date(), { force } = {}) {
+  // 0) Preparações recorrentes de reunião (cria a task da próxima ocorrência)
+  const pops = prepOps(S(), now);
+  if (pops.length) mutate((st) => applyPrepOps(st, pops, newItem, now));
   const state = S(); const s = state.settings;
   const fire = []; const carry = [];
   const last = (k) => (state.log[k] ? new Date(state.log[k]) : null);

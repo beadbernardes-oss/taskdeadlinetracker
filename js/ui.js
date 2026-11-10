@@ -76,7 +76,9 @@ export function Card({ item, now = new Date(), showOwner = true }) {
       ${item.deadline && html`<span class=${`due ${overdue ? 'late' : ''}`}><${Icon} n="clock" s=${12} />${fmtRel(item.deadline, now)}</span>`}
       ${showOwner && item.owner === 'other' && html`<span class="owner"><${Avatar} name=${item.ownerName} size=${18} />${item.ownerName}</span>`}
     </div>
-    ${(pp || r.length || fu?.needs || subs.length) ? html`<div class="card-flags">
+    ${(pp || r.length || fu?.needs || subs.length || item.prep || item.link) ? html`<div class="card-flags">
+      ${item.prep && html`<span class="flag" title="Preparação recorrente de reunião">↻ Recorrente</span>`}
+      ${item.link && /^https?:\/\//.test(item.link) && html`<a class="flag" href=${item.link} target="_blank" rel="noopener" onClick=${(e) => e.stopPropagation()}>Doc</a>`}
       ${pp > 0 && html`<span class="flag warn">Adiado ${pp}x</span>`}
       ${r.length > 0 && html`<span class="flag danger" title=${r.join('\n')}>Em risco</span>`}
       ${fu?.needs && html`<span class="flag info">Follow-up</span>`}
