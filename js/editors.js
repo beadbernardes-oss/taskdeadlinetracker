@@ -4,6 +4,7 @@ import {
   addAgendaItem, updateAgenda, removeAgenda, updateOcc, people, newItem, PALETTE, informMessage, clearDemo, hasDemo, replaceState, DEFAULT_SETTINGS,
 } from './store.js';
 import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.js';
+import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere } from './push.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
@@ -470,6 +471,22 @@ export function IcsModal() {
   <//>`;
 }
 
+function PushBox() {
+  const [on, setOn] = useState(pushEnabledHere());
+  const [busy, setBusy] = useState(false);
+  const sup = pushSupport();
+  const run = async (fn, ok) => { setBusy(true); try { await fn(); toast(ok); setOn(pushEnabledHere()); } catch (e) { toast(e.message); } setBusy(false); };
+  return html`<div class="notif-perm">
+    <div><b>Alertas neste aparelho</b><span class="muted">${!sup.ok ? sup.reason
+      : on ? 'Ativados. Chegam mesmo com o app fechado, inclusive no fim de semana (respeitando o silêncio).'
+      : 'Ative em cada aparelho onde quer receber: iPhone e computador.'}</span></div>
+    ${sup.ok && (on
+      ? html`<div class="row"><button class="btn btn-sm" disabled=${busy} onClick=${() => run(sendTest, 'Teste enviado. Deve chegar em até 1 minuto.')}>Enviar teste</button>
+          <button class="btn btn-sm btn-ghost" disabled=${busy} onClick=${() => run(disablePush, 'Alertas desativados neste aparelho.')}>Desativar</button></div>`
+      : html`<button class="btn btn-sm btn-primary" disabled=${busy} onClick=${() => run(enablePush, 'Alertas ativados neste aparelho.')}>${busy ? 'Ativando…' : 'Ativar'}</button>`)}
+  </div>`;
+}
+
 export function SettingsModal() {
   const st = S(); const s = st.settings;
   const setS = (p) => mutate((x) => { Object.assign(x.settings, p); });
@@ -508,10 +525,7 @@ export function SettingsModal() {
           <option value="all">Todos os dias</option><option value="weekdays">Só dias úteis</option><option value="off">Desligado</option></select><//>
         <${Field} label="Prazo para avisar stakeholders"><select value=${s.informWithinHours} onChange=${(e) => setS({ informWithinHours: +e.target.value })}>${[1, 2, 4, 8, 24].map((h) => html`<option value=${h}>${h}h após o "Não"</option>`)}</select><//>
       </div>
-      <div class="notif-perm">
-        <div><b>Notificações neste dispositivo</b><span class="muted">${perm === 'granted' ? 'Ativadas. Nesta versão chegam com o app aberto ou em segundo plano.' : perm === 'denied' ? 'Bloqueadas no navegador. Libere nas permissões do site.' : perm === 'unsupported' ? 'Este navegador não suporta notificações.' : 'Ainda não ativadas.'}</span></div>
-        ${perm === 'default' && html`<button class="btn btn-sm btn-primary" onClick=${async () => { await Notification.requestPermission(); re((x) => x + 1); }}>Ativar</button>`}
-      </div>
+      <${PushBox} />
     </div>
     <div class="set-sec">
       <h4>Testar fluxos</h4>

@@ -77,6 +77,8 @@ export function setSW(reg) { swReg = reg; }
 function osNotify(n) {
   try {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // Aparelho com push ativo recebe pelo servidor; evita notificação dupla.
+    if (localStorage.getItem('tracker.pushEnabled') === '1') return;
     const opts = { body: n.body, tag: n.key, data: { ref: n.ref }, icon: 'icon.svg', badge: 'icon.svg', requireInteraction: n.kind === 'ask' };
     if (swReg) swReg.showNotification(n.title, opts);
     else new Notification(n.title, opts);

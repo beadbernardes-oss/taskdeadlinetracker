@@ -5,7 +5,11 @@ import { S, setUI, replaceState, setPersistHook, toast } from './store.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
+import { syncSchedule } from './push.js';
+
 let userId = null;
+let user = null;
+export const currentUser = () => user;
 let version = 0;
 let timer = null;
 let pushing = false;
@@ -18,7 +22,7 @@ export async function startCloud() {
   const { data: { session } } = await sb.auth.getSession();
   sb.auth.onAuthStateChange((ev, s) => {
     if (ev === 'SIGNED_IN' && s && s.user.id !== userId) connect(s.user);
-    if (ev === 'SIGNED_OUT') { userId = null; status('out'); }
+    if (ev === 'SIGNED_OUT') { userId = null; user = null; status('out'); }
   });
   if (session) await connect(session.user);
   else status('out');
@@ -31,8 +35,8 @@ export async function sendLink(email) {
 
 export async function signOut() { await sb.auth.signOut(); }
 
-async function connect(user) {
-  userId = user.id;
+async function connect(u) {
+  user = u; userId = u.id;
   status('syncing', { email: user.email });
   const { data, error } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).maybeSingle();
   if (error) { status('error', { cloudError: error.message }); return; }
@@ -48,6 +52,7 @@ async function connect(user) {
   setPersistHook(schedule);
   listen();
   status('in');
+  syncSchedule().catch(() => {});
 }
 
 function payload() {
@@ -80,6 +85,7 @@ async function push() {
     if (remote) { version = remote.version; replaceState(remote.data, { silent: true }); toast('Atualizado com mudanças de outro aparelho.'); }
   } else version = next;
   setUI({ cloud: dirty ? 'syncing' : 'in' });
+  if (!dirty) syncSchedule().catch(() => {});
 }
 
 let channel = null;
@@ -100,4 +106,5 @@ document.addEventListener('visibilitychange', async () => {
   if (document.hidden || !userId || dirty || pushing) return;
   const { data } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).single();
   if (data && data.version > version) { version = data.version; replaceState(data.data, { silent: true }); }
+  syncSchedule().catch(() => {}); // recalcula ao voltar (ex.: novo dia)
 });

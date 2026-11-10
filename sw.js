@@ -23,7 +23,7 @@ self.addEventListener('notificationclick', (e) => {
   e.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (all.length) { await all[0].focus(); all[0].postMessage({ ref }); return; }
-    await self.clients.openWindow('./#/hoje');
+    await self.clients.openWindow(ref ? `./?ref=${encodeURIComponent(JSON.stringify(ref))}#/hoje` : './#/hoje');
   })());
 });
 

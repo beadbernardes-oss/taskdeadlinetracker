@@ -165,6 +165,18 @@ load();
 render(html`<${App} />`, document.getElementById('root'));
 startCloud().catch((e) => setUI({ cloud: 'error', cloudError: e.message }));
 
+function openRef(r) {
+  if (!r) return;
+  if (r.type === 'ask') setUI({ askSnoozeUntil: 0, askFocus: r.id, modal: null });
+  else if (r.type === 'item') setUI({ drawer: { type: 'item', id: r.id } });
+  else if (r.type === 'occ') setUI({ drawer: { type: 'occ', key: r.key } });
+}
+// Aberto a partir de uma notificação push (app estava fechado)
+try {
+  const q = new URLSearchParams(location.search).get('ref');
+  if (q) { openRef(JSON.parse(q)); history.replaceState(null, '', location.pathname + location.hash); }
+} catch { /* ignora */ }
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then((reg) => setSW(reg)).catch(() => {});
   navigator.serviceWorker.addEventListener('message', (e) => {
