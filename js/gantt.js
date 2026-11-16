@@ -15,6 +15,9 @@ const ownerKey = (i) => (i.owner === 'me' ? 'Eu' : (i.ownerName || '').trim() ||
 const byDue = (a, b) => (a.deadline ? +new Date(a.deadline) : Infinity) - (b.deadline ? +new Date(b.deadline) : Infinity) || a.priority - b.priority || a.title.localeCompare(b.title);
 // Dentro de cada grupo: P0 no topo, depois P1, depois P2; empate pelo prazo mais próximo
 const byPrio = (a, b) => (a.priority ?? 2) - (b.priority ?? 2) || byDue(a, b);
+// Tickets abertos para o time de produto (bugs) não têm MRD nem PRD: mostram só o link do ticket
+export const isTicket = (i) => /tickets to product team/i.test(macroName(i.macrotemaId) || '');
+const ticketUrl = (i) => (isUrl(i.link) ? i.link : ((i.notes || '').match(/https?:\/\/\S+/) || [])[0]);
 const isUrl = (u) => /^https?:\/\//.test(u || '');
 // MRD (você escreve) e PRD (time de produto escreve): link quando existe; pendente tracejado quando não
 function DocChip({ i, kind }) {
@@ -150,7 +153,9 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
   return html`<div class=${`g-row g-item ${i.status === 'done' ? 'is-done' : ''}`} onClick=${() => openItem(i.id)} role="button" tabindex="0" onKeyDown=${(ev) => { if (ev.key === 'Enter') openItem(i.id); }}>
     <div class="g-left">
       <span class="g-c-task"><span class="g-title"><${Prio} p=${i.priority} /><b>${i.title}</b>${late && html`<span class="g-x" title="Vencido"><${Icon} n="diamond" s=${11} /></span>`}
-        <span class="g-docs"><${DocChip} i=${i} kind="mrd" /><${DocChip} i=${i} kind="prd" /></span></span>
+        <span class="g-docs">${isTicket(i)
+          ? ticketUrl(i) && html`<a class="g-dc on tk" href=${ticketUrl(i)} target="_blank" rel="noopener" onClick=${(ev) => ev.stopPropagation()} title="Abrir ticket">TICKET</a>`
+          : html`<${DocChip} i=${i} kind="mrd" /><${DocChip} i=${i} kind="prd" />`}</span></span>
         ${i.notes && html`<span class="g-sub">${i.notes.split('\n')[0]}</span>`}</span>
       <span class="g-c-st"><span class=${`g-status st-${i.status}`}>${STATUS_LBL[i.status] || i.status}</span></span>
       <span class=${`g-c-pr ${prog === 100 ? 'ok' : ''}`}>${prog}%</span>

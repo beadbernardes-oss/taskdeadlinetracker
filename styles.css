@@ -589,6 +589,8 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .g-dc.off { background: none; color: var(--muted); border: 1px dashed var(--border-strong); opacity: .75; }
 .g-dc.off.mrd { color: var(--warn); border-color: var(--warn); opacity: .85; }
 .g-dc.off:hover { opacity: 1; }
+.g-dc.on.tk { background: var(--surface-2); color: var(--muted); }
+.g-dc.on.tk:hover { background: var(--accent); color: var(--on-accent); }
 .g-status { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; white-space: nowrap; background: var(--surface-3); color: var(--muted); }
 .g-status.st-doing { background: var(--info-soft); color: var(--info); }
 .g-status.st-waiting { background: var(--warn-soft); color: var(--warn); }

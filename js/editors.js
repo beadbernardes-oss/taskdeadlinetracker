@@ -7,7 +7,7 @@ import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.j
 import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere, pushDiagnose } from './push.js';
 import { setPassword } from './cloud.js';
 import { newPrep } from './prep.js';
-import { inGantt } from './gantt.js';
+import { inGantt, isTicket } from './gantt.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
@@ -104,12 +104,12 @@ export function ItemDrawer({ id, preset }) {
       <label class="check"><input type="checkbox" checked=${inGantt(item, st)} onChange=${(e) => set({ gantt: e.target.checked })} />Mostrar no Gantt Product Requirements</label>
       <${Field} label="Stakeholders" hint="Quem precisa saber se o prazo mudar"><${PeopleInput} value=${item.stakeholders} suggestions=${ppl} onChange=${(v) => set({ stakeholders: v })} /><//>
       <${Field} label="Notas"><textarea rows="3" value=${item.notes} placeholder="Contexto, links, critérios de aceite…" onInput=${(e) => set({ notes: e.target.value })}></textarea><//>
-      ${inGantt(item, st) && html`<div class="grid2">
+      ${inGantt(item, st) && !isTicket(item) && html`<div class="grid2">
         ${[['mrd', 'MRD', 'Você escreve'], ['prd', 'PRD', 'O time de produto escreve']].map(([k, lbl, hint]) => html`<${Field} label=${lbl} hint=${hint}>
           ${/^https?:\/\//.test(item[k] || '') ? html`<div class="row"><a class="doclink" href=${item[k]} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir ${lbl}</a></div>` : null}
           <input value=${item[k] || ''} placeholder=${`Link do ${lbl} (https://…)`} onInput=${(e) => set({ [k]: e.target.value.trim() })} /><//>`)}
       </div>`}
-      ${(!inGantt(item, st) || item.link) && html`<${Field} label=${inGantt(item, st) ? 'Outro link' : 'Link do documento'}>${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}
+      ${(!inGantt(item, st) || isTicket(item) || item.link) && html`<${Field} label=${isTicket(item) ? 'Link do ticket' : inGantt(item, st) ? 'Outro link' : 'Link do documento'}>${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}
         <input value=${item.link || ''} placeholder="https://…" onInput=${(e) => set({ link: e.target.value.trim() })} /><//>`}
       ${item.prep && html`<p class="muted small">↻ Preparação recorrente de “${(st.series.find((x) => x.id === item.prep.sid) || {}).title || 'reunião'}”: a próxima task é criada sozinha depois da reunião.${item.askSkipWeekend ? ' Se a pergunta de prazo cair no fim de semana, ela vem na sexta.' : ''}</p>`}
 
