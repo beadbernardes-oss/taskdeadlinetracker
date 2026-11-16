@@ -7,6 +7,7 @@ import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.j
 import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere, pushDiagnose } from './push.js';
 import { setPassword } from './cloud.js';
 import { newPrep } from './prep.js';
+import { inGantt } from './gantt.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
@@ -96,6 +97,11 @@ export function ItemDrawer({ id, preset }) {
         <${Field} label="Prioridade"><${PrioPicker} value=${item.priority} onChange=${(v) => set({ priority: v })} /><//>
         <${Field} label="Macrotema"><${MacroSelect} value=${item.macrotemaId} onChange=${(v) => set({ macrotemaId: v })} /><//>
       </div>
+      <div class="grid2">
+        <${Field} label="Início (Gantt)" hint="Opcional: onde a barra começa"><input type="date" value=${item.start ? dayKey(item.start) : ''} onChange=${(e) => set({ start: e.target.value ? new Date(`${e.target.value}T09:00`).toISOString() : null })} /><//>
+        <${Field} label="Progresso"><select value=${item.progress || 0} onChange=${(e) => set({ progress: +e.target.value })}>${[0, 10, 25, 50, 75, 90, 100].map((p) => html`<option value=${p}>${p}%</option>`)}</select><//>
+      </div>
+      <label class="check"><input type="checkbox" checked=${inGantt(item, st)} onChange=${(e) => set({ gantt: e.target.checked })} />Mostrar no Gantt Product Requirements</label>
       <${Field} label="Stakeholders" hint="Quem precisa saber se o prazo mudar"><${PeopleInput} value=${item.stakeholders} suggestions=${ppl} onChange=${(v) => set({ stakeholders: v })} /><//>
       <${Field} label="Notas"><textarea rows="3" value=${item.notes} placeholder="Contexto, links, critérios de aceite…" onInput=${(e) => set({ notes: e.target.value })}></textarea><//>
       <${Field} label="Link do documento">${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}

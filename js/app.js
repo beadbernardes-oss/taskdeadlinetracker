@@ -5,11 +5,13 @@ import { parseQuick } from './util.js';
 import { Icon, Seg, openNew } from './ui.js';
 import { startCloud, sendLink, signOut, signInPassword } from './cloud.js';
 import { Today, Week, Kanban, Meetings, People, Summary } from './views.js';
+import { Gantt } from './gantt.js';
 import { ItemDrawer, OccDrawer, AskModal, PostponeModal, PautaModal, SeriesModal, IcsModal, SettingsModal, NotifPanel } from './editors.js';
 
 const ROUTES = [
   { id: 'hoje', label: 'Hoje', icon: 'sun', C: Today },
   { id: 'semana', label: 'Semana', icon: 'calendar', C: Week },
+  { id: 'gantt', label: 'Gantt Product Requirements', short: 'Gantt', icon: 'gantt', C: Gantt },
   { id: 'kanban', label: 'Kanban', icon: 'board', C: Kanban },
   { id: 'reunioes', label: 'Reuniões', icon: 'list', C: Meetings },
   { id: 'pessoas', label: 'Pessoas', icon: 'users', C: People },
@@ -151,7 +153,7 @@ function App() {
       ${u.showFilters && html`<div class="mobile-filters"><${Filters} /></div>`}
       <div class="content"><${View} /></div>
     </main>
-    <nav class="tabbar">${ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} s=${20} /><span>${r.label}</span>${counts[r.id] ? html`<em>${counts[r.id]}</em>` : ''}</a>`)}</nav>
+    <nav class="tabbar">${ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} s=${20} /><span>${r.short || r.label}</span>${counts[r.id] ? html`<em>${counts[r.id]}</em>` : ''}</a>`)}</nav>
 
     ${d && html`<div class="drawer-bg" onClick=${(e) => { if (e.target === e.currentTarget) setUI({ drawer: null }); }}>
       <aside class="drawer">

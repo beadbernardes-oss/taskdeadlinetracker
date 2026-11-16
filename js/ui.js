@@ -24,6 +24,7 @@ const P = {
   clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
   msg: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
   diamond: 'M12 2 22 12 12 22 2 12z',
+  gantt: 'M3 5h9M7 12h12M5 19h8M3 3v18',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
   filter: 'M22 3H2l8 9.46V19l4 2v-8.54z',
   arrow: 'M5 12h14M12 5l7 7-7 7',
