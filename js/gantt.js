@@ -15,6 +15,14 @@ const ownerKey = (i) => (i.owner === 'me' ? 'Eu' : (i.ownerName || '').trim() ||
 const byDue = (a, b) => (a.deadline ? +new Date(a.deadline) : Infinity) - (b.deadline ? +new Date(b.deadline) : Infinity) || a.priority - b.priority || a.title.localeCompare(b.title);
 // Dentro de cada grupo: P0 no topo, depois P1, depois P2; empate pelo prazo mais próximo
 const byPrio = (a, b) => (a.priority ?? 2) - (b.priority ?? 2) || byDue(a, b);
+const isUrl = (u) => /^https?:\/\//.test(u || '');
+// MRD (você escreve) e PRD (time de produto escreve): link quando existe; pendente tracejado quando não
+function DocChip({ i, kind }) {
+  const url = i[kind]; const lbl = kind.toUpperCase();
+  if (isUrl(url)) return html`<a class=${`g-dc on ${kind}`} href=${url} target="_blank" rel="noopener" onClick=${(ev) => ev.stopPropagation()} title=${`Abrir ${lbl}`}>${lbl}</a>`;
+  const tip = kind === 'mrd' ? 'MRD pendente · você escreve (clique para adicionar o link)' : 'PRD pendente · o time de produto escreve (clique para adicionar o link)';
+  return html`<button class=${`g-dc off ${kind}`} title=${tip} onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>${lbl}</button>`;
+}
 const fmtD = (d) => { d = new Date(d); return `${d.getDate()} ${MO[d.getMonth()]}`; };
 
 function windowFor(scale, offset, now) {
@@ -142,7 +150,7 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
   return html`<div class=${`g-row g-item ${i.status === 'done' ? 'is-done' : ''}`} onClick=${() => openItem(i.id)} role="button" tabindex="0" onKeyDown=${(ev) => { if (ev.key === 'Enter') openItem(i.id); }}>
     <div class="g-left">
       <span class="g-c-task"><span class="g-title"><${Prio} p=${i.priority} /><b>${i.title}</b>${late && html`<span class="g-x" title="Vencido"><${Icon} n="diamond" s=${11} /></span>`}
-        ${i.link && /^https?:\/\//.test(i.link) && html`<a class="g-doc" href=${i.link} target="_blank" rel="noopener" onClick=${(ev) => ev.stopPropagation()} title="Abrir documento"><${Icon} n="link" s=${12} /></a>`}</span>
+        <span class="g-docs"><${DocChip} i=${i} kind="mrd" /><${DocChip} i=${i} kind="prd" /></span></span>
         ${i.notes && html`<span class="g-sub">${i.notes.split('\n')[0]}</span>`}</span>
       <span class="g-c-st"><span class=${`g-status st-${i.status}`}>${STATUS_LBL[i.status] || i.status}</span></span>
       <span class=${`g-c-pr ${prog === 100 ? 'ok' : ''}`}>${prog}%</span>

@@ -104,8 +104,13 @@ export function ItemDrawer({ id, preset }) {
       <label class="check"><input type="checkbox" checked=${inGantt(item, st)} onChange=${(e) => set({ gantt: e.target.checked })} />Mostrar no Gantt Product Requirements</label>
       <${Field} label="Stakeholders" hint="Quem precisa saber se o prazo mudar"><${PeopleInput} value=${item.stakeholders} suggestions=${ppl} onChange=${(v) => set({ stakeholders: v })} /><//>
       <${Field} label="Notas"><textarea rows="3" value=${item.notes} placeholder="Contexto, links, critérios de aceite…" onInput=${(e) => set({ notes: e.target.value })}></textarea><//>
-      <${Field} label="Link do documento">${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}
-        <input value=${item.link || ''} placeholder="https://…" onInput=${(e) => set({ link: e.target.value.trim() })} /><//>
+      ${inGantt(item, st) && html`<div class="grid2">
+        ${[['mrd', 'MRD', 'Você escreve'], ['prd', 'PRD', 'O time de produto escreve']].map(([k, lbl, hint]) => html`<${Field} label=${lbl} hint=${hint}>
+          ${/^https?:\/\//.test(item[k] || '') ? html`<div class="row"><a class="doclink" href=${item[k]} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir ${lbl}</a></div>` : null}
+          <input value=${item[k] || ''} placeholder=${`Link do ${lbl} (https://…)`} onInput=${(e) => set({ [k]: e.target.value.trim() })} /><//>`)}
+      </div>`}
+      ${(!inGantt(item, st) || item.link) && html`<${Field} label=${inGantt(item, st) ? 'Outro link' : 'Link do documento'}>${item.link && /^https?:\/\//.test(item.link) ? html`<div class="row"><a class="doclink" href=${item.link} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />Abrir documento</a></div>` : null}
+        <input value=${item.link || ''} placeholder="https://…" onInput=${(e) => set({ link: e.target.value.trim() })} /><//>`}
       ${item.prep && html`<p class="muted small">↻ Preparação recorrente de “${(st.series.find((x) => x.id === item.prep.sid) || {}).title || 'reunião'}”: a próxima task é criada sozinha depois da reunião.${item.askSkipWeekend ? ' Se a pergunta de prazo cair no fim de semana, ela vem na sexta.' : ''}</p>`}
 
       ${item.subtype === 'inform' && html`<div class="block">
