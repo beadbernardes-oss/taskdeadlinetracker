@@ -42,8 +42,15 @@ export function MacroPill({ id }) {
   return html`<span class="macro" style=${`--mc:${m.color}`}><i></i>${m.name}</span>`;
 }
 
+// Foto da pessoa (guardada nos seus dados no Supabase, não no código do site)
+export const photoOf = (name) => (S().photos || {})[nameKey(name || '')] || null;
+
 export function Avatar({ name, size = 22 }) {
-  return html`<span class="avatar" style=${`width:${size}px;height:${size}px;font-size:${size * 0.42}px`} title=${name}>${initials(name)}</span>`;
+  const ph = photoOf(name);
+  const st = `width:${size}px;height:${size}px;font-size:${size * 0.42}px`;
+  return ph
+    ? html`<img class="avatar photo" src=${ph} alt=${name} title=${name} style=${st} />`
+    : html`<span class="avatar" style=${st} title=${name}>${initials(name)}</span>`;
 }
 
 export const openItem = (id) => setUI({ drawer: { type: 'item', id } });

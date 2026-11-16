@@ -106,7 +106,7 @@ export function Gantt() {
           <div class="g-row g-group" onClick=${() => toggle(k)}>
             <div class="g-left">
               <span class=${`g-chev ${collapsed[k] ? 'closed' : ''}`}><${Icon} n="down" s=${15} /></span>
-              ${group === 'owner' && html`<${Avatar} name=${k} size=${22} />`}<b class="g-gname">${k}</b>
+              ${group === 'owner' && html`<${Avatar} name=${k} size=${28} />`}<b class="g-gname">${k}</b>
               <span class="muted small">${list.length} entrega${list.length > 1 ? 's' : ''}</span>
             </div>
             <div class="g-tl g-gmeta">

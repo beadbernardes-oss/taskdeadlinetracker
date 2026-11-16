@@ -614,3 +614,4 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 }
 .g-note { z-index: 2; background: var(--surface); padding: 0 6px; border-radius: 4px; }
 .g-item:hover .g-note { background: var(--surface-2); }
+.avatar.photo { object-fit: cover; display: inline-block; padding: 0; background: var(--surface-3); }
