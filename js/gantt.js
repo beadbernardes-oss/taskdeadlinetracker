@@ -13,6 +13,8 @@ export const inGantt = (i, st = S()) => !i.parentId && i.subtype !== 'inform' &&
 const startOf = (i) => new Date(i.start || i.createdAt || Date.now());
 const ownerKey = (i) => (i.owner === 'me' ? 'Eu' : (i.ownerName || '').trim() || 'A definir');
 const byDue = (a, b) => (a.deadline ? +new Date(a.deadline) : Infinity) - (b.deadline ? +new Date(b.deadline) : Infinity) || a.priority - b.priority || a.title.localeCompare(b.title);
+// Dentro de cada grupo: P0 no topo, depois P1, depois P2; empate pelo prazo mais próximo
+const byPrio = (a, b) => (a.priority ?? 2) - (b.priority ?? 2) || byDue(a, b);
 const fmtD = (d) => { d = new Date(d); return `${d.getDate()} ${MO[d.getMonth()]}`; };
 
 function windowFor(scale, offset, now) {
@@ -40,7 +42,7 @@ export function Gantt() {
   const soon = open.filter((i) => i.deadline && new Date(i.deadline) >= now && new Date(i.deadline) < addDays(now, 14)).sort(byDue);
 
   const groups = new Map();
-  for (const i of items.sort(byDue)) {
+  for (const i of items.sort(byPrio)) {
     const k = group === 'owner' ? ownerKey(i) : (macroName(i.macrotemaId) || 'Sem macrotema');
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(i);
@@ -101,7 +103,7 @@ export function Gantt() {
           </div>
         </div>
         ${gkeys.map((k) => { const list = groups.get(k); const done = all.filter((i) => (group === 'owner' ? ownerKey(i) : (macroName(i.macrotemaId) || 'Sem macrotema')) === k);
-          const nd = done.filter((i) => i.status === 'done').length; const next = list.filter((i) => i.deadline && i.status !== 'done')[0];
+          const nd = done.filter((i) => i.status === 'done').length; const next = list.filter((i) => i.deadline && i.status !== 'done').sort(byDue)[0];
           return html`
           <div class="g-row g-group" onClick=${() => toggle(k)}>
             <div class="g-left">
