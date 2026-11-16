@@ -19,7 +19,7 @@ export function applyFeed(state, feed) {
   const ignore = new Set(state.dxIgnore || []);
   const groups = new Map();
   for (const e of feed.events) {
-    if (/^\s*\[pessoal\]/i.test(e.title || '') || ignore.has(e.sid)) continue; // pessoal ou excluída por você
+    if (/^\s*\[(pessoal|personal)\]/i.test(e.title || '') || ignore.has(e.sid)) continue; // pessoal ou excluída por você
     if (!groups.has(e.sid)) groups.set(e.sid, []);
     groups.get(e.sid).push(e);
   }

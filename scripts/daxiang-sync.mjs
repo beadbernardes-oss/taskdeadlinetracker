@@ -14,7 +14,7 @@ const PAST_DAYS = 7, FUTURE_DAYS = 56, CHUNK_DAYS = 7;
 const ENDPOINT = 'https://bskbumrpbbyujlutlipa.supabase.co/functions/v1/dx-ingest';
 const LOG = join(ROOT, '.secrets', 'daxiang-sync.log');
 const DRY = process.argv.includes('--dry');
-const PESSOAL = /^\s*\[pessoal\]/i; // eventos marcados [PESSOAL] nunca saem do computador
+const PESSOAL = /^\s*\[(pessoal|personal)\]/i; // eventos marcados [PESSOAL] ou [PERSONAL] nunca saem do computador
 // Caminho completo do CLI (a tarefa agendada do Windows não tem a pasta do npm no PATH)
 const NPM_DIR = join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'npm');
 const OA_FULL = join(NPM_DIR, 'oa-skills.cmd');

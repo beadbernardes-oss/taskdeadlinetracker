@@ -1,5 +1,5 @@
 // Push: inscreve o aparelho e mantém a agenda de alertas no Supabase.
-import { sb, currentUser } from './cloud.js';
+import { sb, currentUser, db } from './cloud.js';
 import { VAPID_PUBLIC_KEY } from './config.js';
 import { S } from './store.js';
 import { buildSchedule } from './schedule.js';
@@ -57,9 +57,9 @@ export async function enablePush() {
   let sub = await reg.pushManager.getSubscription();
   if (!sub) sub = await withTimeout(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLIC_KEY) }), 20000, 'A Apple não respondeu à inscrição. Tente de novo em instantes.');
   const device = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'Windows';
-  const { error } = await sb.from('push_subscriptions').upsert({
+  const { error } = await db(() => sb.from('push_subscriptions').upsert({
     user_id: user.id, endpoint: sub.endpoint, p256dh: ab64(sub.getKey('p256dh')), auth: ab64(sub.getKey('auth')), device,
-  }, { onConflict: 'endpoint' });
+  }, { onConflict: 'endpoint' }));
   if (error) throw new Error(error.message);
   try { localStorage.setItem(LS, '1'); } catch { /* ok */ }
   await syncSchedule();
@@ -68,16 +68,16 @@ export async function enablePush() {
 export async function disablePush() {
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  if (sub) { await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+  if (sub) { await db(() => sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)); await sub.unsubscribe(); }
   try { localStorage.removeItem(LS); } catch { /* ok */ }
 }
 
 export async function sendTest() {
   const user = currentUser(); if (!user) throw new Error('Entre na sua conta primeiro.');
-  const { error } = await sb.from('scheduled_alerts').insert({
+  const { error } = await db(() => sb.from('scheduled_alerts').insert({
     user_id: user.id, key: `test:${Date.now()}`, fire_at: new Date().toISOString(), kind: 'test',
     title: 'Teste do Tracker', body: 'Se você está vendo isto, os alertas estão funcionando.', ref: { type: 'route', route: 'hoje' },
-  });
+  }));
   if (error) throw new Error(error.message);
 }
 
@@ -89,9 +89,9 @@ export async function syncSchedule() {
   syncing = true;
   try {
     const rows = buildSchedule(S()).map((r) => ({ ...r, user_id: user.id }));
-    await sb.from('scheduled_alerts').delete().eq('user_id', user.id).is('sent_at', null).not('key', 'like', 'test:%');
+    await db(() => sb.from('scheduled_alerts').delete().eq('user_id', user.id).is('sent_at', null).not('key', 'like', 'test:%'));
     for (let i = 0; i < rows.length; i += 400) {
-      await sb.from('scheduled_alerts').upsert(rows.slice(i, i + 400), { onConflict: 'user_id,key', ignoreDuplicates: true });
+      await db(() => sb.from('scheduled_alerts').upsert(rows.slice(i, i + 400), { onConflict: 'user_id,key', ignoreDuplicates: true }));
     }
   } finally {
     syncing = false;

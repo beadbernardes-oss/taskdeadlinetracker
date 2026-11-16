@@ -19,6 +19,19 @@ let dirty = false;
 
 const status = (cloud, extra = {}) => setUI({ cloud, ...extra });
 
+// Login vencido no servidor (ex.: relógio do computador atrasado alguns minutos): renova e tenta de novo.
+const isAuthErr = (e) => !!e && (e.code === 'PGRST301' || e.code === 'PGRST303' || /jwt|token is expired/i.test(e.message || ''));
+export async function db(run) {
+  let r = await run();
+  if (r.error && isAuthErr(r.error)) {
+    const { error } = await sb.auth.refreshSession();
+    if (!error) r = await run();
+  }
+  return r;
+}
+let retryN = 0;
+const retryConnect = (u) => { const wait = Math.min(60, 5 * 2 ** retryN++) * 1000; setTimeout(() => { if (user?.id === u.id) connect(u); }, wait); };
+
 export async function startCloud() {
   status('loading');
   const { data: { session } } = await sb.auth.getSession();
@@ -50,13 +63,14 @@ export async function signOut() { await sb.auth.signOut(); }
 async function connect(u) {
   user = u; userId = u.id;
   status('syncing', { email: user.email });
-  const { data, error } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).maybeSingle();
-  if (error) { status('error', { cloudError: error.message }); return; }
+  const { data, error } = await db(() => sb.from('tracker_docs').select('data, version').eq('user_id', userId).maybeSingle());
+  if (error) { status('error', { cloudError: error.message }); retryConnect(u); return; }
+  retryN = 0;
   if (!data) {
     // Primeiro login: sobe o que já existe neste navegador.
     version = 1;
-    const { error: e2 } = await sb.from('tracker_docs').insert({ user_id: userId, data: payload(), version });
-    if (e2) { status('error', { cloudError: e2.message }); return; }
+    const { error: e2 } = await db(() => sb.from('tracker_docs').insert({ user_id: userId, data: payload(), version }));
+    if (e2) { status('error', { cloudError: e2.message }); retryConnect(u); return; }
   } else {
     version = data.version;
     replaceState(data.data, { silent: true });
@@ -71,7 +85,7 @@ async function connect(u) {
 // Agenda do Daxiang enviada pelo script do computador
 async function pullFeed(row) {
   if (!userId) return;
-  if (!row) { const { data } = await sb.from('calendar_feed').select('data, updated_at').eq('user_id', userId).maybeSingle(); row = data; }
+  if (!row) { const { data } = await db(() => sb.from('calendar_feed').select('data, updated_at').eq('user_id', userId).maybeSingle()); row = data; }
   if (!row || !row.data) return;
   setUI({ dxSyncedAt: row.data.syncedAt || row.updated_at });
   const draft = JSON.parse(JSON.stringify(getState()));
@@ -97,14 +111,19 @@ async function push() {
   pushing = true; dirty = false;
   const next = version + 1;
   // Grava só se ninguém gravou antes (controle por versão)
-  const { data, error } = await sb.from('tracker_docs')
+  const { data, error } = await db(() => sb.from('tracker_docs')
     .update({ data: payload(), version: next, updated_at: new Date().toISOString() })
-    .eq('user_id', userId).eq('version', version).select('version');
+    .eq('user_id', userId).eq('version', version).select('version'));
   pushing = false;
-  if (error) { setUI({ cloud: 'error', cloudError: error.message }); return; }
+  if (error) {
+    // Não perde a mudança: tenta gravar de novo em alguns segundos
+    setUI({ cloud: 'error', cloudError: error.message });
+    dirty = true; clearTimeout(timer); timer = setTimeout(push, 15000);
+    return;
+  }
   if (!data || !data.length) {
     // Outro aparelho gravou antes: pega a versão dele.
-    const { data: remote } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).single();
+    const { data: remote } = await db(() => sb.from('tracker_docs').select('data, version').eq('user_id', userId).single());
     if (remote) { version = remote.version; replaceState(remote.data, { silent: true }); toast('Atualizado com mudanças de outro aparelho.'); }
   } else version = next;
   setUI({ cloud: dirty ? 'syncing' : 'in' });
@@ -127,8 +146,9 @@ function listen() {
 
 // Ao voltar para o app (ex.: iPhone), confere se há versão mais nova.
 document.addEventListener('visibilitychange', async () => {
-  if (document.hidden || !userId || dirty || pushing) return;
-  const { data } = await sb.from('tracker_docs').select('data, version').eq('user_id', userId).single();
+  if (document.hidden || !userId || pushing) return;
+  if (dirty) { clearTimeout(timer); push(); return; } // havia mudança pendente (ex.: erro de rede): grava agora
+  const { data } = await db(() => sb.from('tracker_docs').select('data, version').eq('user_id', userId).single());
   if (data && data.version > version) { version = data.version; replaceState(data.data, { silent: true }); }
   await pullFeed().catch(() => {});
   syncSchedule().catch(() => {}); // recalcula ao voltar (ex.: novo dia)
