@@ -97,7 +97,7 @@ export function Gantt() {
           <div class="g-tl">
             <div class="g-month">${scale === 'day' ? `${MO[w.from.getMonth()]} ${w.from.getFullYear()}` : 'Semanas (início na segunda)'}</div>
             <div class="g-cols">${w.cols.map((c) => { const cur = scale === 'day' ? dayKey(c) === dayKey(now) : now >= c && now < addDays(c, 7);
-              return html`<span class=${`${cur ? 'cur' : ''} ${scale === 'day' && c.getDay() % 6 === 0 ? 'we' : ''}`}>${scale === 'day' ? html`<em>${WD[c.getDay()].slice(0, 2)}</em>${c.getDate()}` : html`<em>${c.getDate()}</em>${MO[c.getMonth()]}`}</span>`; })}</div>
+              return html`<span class=${`${cur ? 'cur' : ''} ${scale === 'day' && c.getDay() % 6 === 0 ? 'we' : ''}`}>${scale === 'day' ? html`<em>${WD[c.getDay()]}</em>${c.getDate()}` : html`<em>${c.getDate()}</em>${MO[c.getMonth()]}`}</span>`; })}</div>
           </div>
         </div>
         ${gkeys.map((k) => { const list = groups.get(k); const done = all.filter((i) => (group === 'owner' ? ownerKey(i) : (macroName(i.macrotemaId) || 'Sem macrotema')) === k);
