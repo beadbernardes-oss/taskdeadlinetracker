@@ -6,8 +6,11 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // Arquivos do próprio app: sempre confere com o servidor (evita CSS/JS velho do cache do navegador)
+  const same = new URL(e.request.url).origin === self.location.origin;
+  const req = same && e.request.mode !== 'navigate' ? new Request(e.request, { cache: 'no-cache' }) : e.request;
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then((res) => {
         if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
         return res;
