@@ -612,3 +612,5 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
   .g-c-dt { display: none; }
   .g-sub { padding-left: 0; }
 }
+.g-note { z-index: 2; background: var(--surface); padding: 0 6px; border-radius: 4px; }
+.g-item:hover .g-note { background: var(--surface-2); }
