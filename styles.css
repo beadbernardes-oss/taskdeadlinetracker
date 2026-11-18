@@ -262,13 +262,13 @@ select.mini { width: auto; padding: 2px 6px; font-size: 12px; height: 26px; bord
 .week .sect { margin-top: 16px; }
 
 /* ---------- Kanban ---------- */
-.kb { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 12px; align-items: start; }
+.kb { display: grid; grid-template-columns: repeat(var(--kbn, 4), minmax(240px, 1fr)); overflow-x: auto; gap: 12px; align-items: start; }
 .kb-col { background: var(--surface-2); border: 1px solid transparent; border-radius: var(--r-lg); padding: 10px; min-height: 300px; }
 .kb-h { display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 2px 4px 10px; }
 .kb-h .btn { margin-left: auto; }
 .kb-cards { display: flex; flex-direction: column; gap: 8px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot-todo { background: var(--faint); } .dot-doing { background: var(--p2); } .dot-waiting { background: var(--p1); } .dot-done { background: var(--p3); }
+.dot-backlog { background: transparent; border: 1.5px dashed var(--faint); box-sizing: border-box; } .dot-todo { background: var(--faint); } .dot-doing { background: var(--p2); } .dot-waiting { background: var(--p1); } .dot-done { background: var(--p3); }
 
 /* ---------- Reuniões ---------- */
 .series-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
@@ -468,7 +468,7 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 }
 @media (max-width: 1080px) {
   .cols, .meetings .cols { grid-template-columns: 1fr; }
-  .kb { grid-template-columns: repeat(4, minmax(250px, 1fr)); overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+  .kb { grid-template-columns: repeat(var(--kbn, 4), minmax(250px, 1fr)); overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
   .kb-col { scroll-snap-align: start; }
 }
 @media (max-width: 860px) {
@@ -592,6 +592,8 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .g-dc.on.tk { background: var(--surface-2); color: var(--muted); }
 .g-dc.on.tk:hover { background: var(--accent); color: var(--on-accent); }
 .g-status { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; white-space: nowrap; background: var(--surface-3); color: var(--muted); }
+.g-status.st-backlog { background: none; border: 1px dashed var(--border-strong); }
+.g-item.is-backlog .g-bar, .g-item.is-backlog .g-dl { opacity: .45; }
 .g-status.st-doing { background: var(--info-soft); color: var(--info); }
 .g-status.st-waiting { background: var(--warn-soft); color: var(--warn); }
 .g-status.st-done { background: var(--ok-soft); color: var(--ok); }

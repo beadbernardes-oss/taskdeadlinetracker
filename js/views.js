@@ -203,6 +203,7 @@ export function Week() {
 }
 
 // ---------------- KANBAN ----------------
+const BACKLOG_COL = { id: 'backlog', label: 'Backlog' };
 const COLS = [
   { id: 'todo', label: 'A fazer' }, { id: 'doing', label: 'Em andamento' },
   { id: 'waiting', label: 'Aguardando terceiro' }, { id: 'done', label: 'Concluído' },
@@ -213,8 +214,8 @@ export function Kanban() {
   const cutoff = addDays(now, -14);
   return html`<div class="view kanban">
     <div class="toolbar"><span class="hint">Arraste entre colunas para mudar o status. Concluídos dos últimos 14 dias.</span></div>
-    <div class="kb">
-      ${COLS.map((c) => {
+    ${(() => { const cols = items.some((i) => i.status === 'backlog') ? [BACKLOG_COL, ...COLS] : COLS; return html`<div class="kb" style=${`--kbn:${cols.length}`}>
+      ${cols.map((c) => {
         let its = items.filter((i) => (i.status || 'todo') === c.id);
         if (c.id === 'done') its = its.filter((i) => !i.doneAt || new Date(i.doneAt) >= cutoff).sort((a, b) => new Date(b.doneAt) - new Date(a.doneAt));
         else its.sort(byDeadline);
@@ -225,7 +226,7 @@ export function Kanban() {
           <div class="kb-cards">${its.map((i) => html`<${Card} item=${i} now=${now} />`)}</div>
         <//>`;
       })}
-    </div>
+    </div>`; })()}
   </div>`;
 }
 

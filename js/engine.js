@@ -42,7 +42,7 @@ export function questions(state = S(), now = new Date()) {
 
 // Follow-up de terceiros: D-2 às 9h, no dia às 9h e, depois de vencido, todo dia às 9h.
 export function followUp(i, s, now = new Date()) {
-  if (i.owner !== 'other' || !isOpen(i) || !i.deadline) return null;
+  if (i.owner !== 'other' || !isOpen(i) || !i.deadline || i.status === 'backlog') return null; // backlog: ainda não é hora de cobrar
   const dl = new Date(i.deadline);
   const at9 = (day) => { const d = startOfDay(day); d.setHours(s.followUpHour, 0, 0, 0); return d; };
   const cands = [{ at: at9(addDays(dl, -s.followUpDaysBefore)), label: `Prazo em ${s.followUpDaysBefore} dias` }];

@@ -12,6 +12,7 @@ import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureO
 import { uid, toInput, fromInput, fmtDateTime, fmtRel, fmtAgo, fmtShort, fmtDate, fmtTime, addDays, startOfDay, dayKey, nameKey, H, copy, download, WD } from './util.js';
 import { Icon, Prio, MacroPill, Avatar, Card, PeopleInput, AutoText, Seg, PrioPicker, MacroSelect, openItem, openOcc, closeModal, openModal, Empty } from './ui.js';
 
+const BACKLOG = { value: 'backlog', label: 'Backlog' }; // só para entregas do Gantt
 const STATUS = [{ value: 'todo', label: 'A fazer' }, { value: 'doing', label: 'Em andamento' }, { value: 'waiting', label: 'Aguardando' }, { value: 'done', label: 'Concluído' }];
 const closeDrawer = () => setUI({ drawer: null });
 
@@ -91,7 +92,7 @@ export function ItemDrawer({ id, preset }) {
       <div class="grid2">
         <${Field} label="Prazo" hint=${at && isOpen(item) ? `Pergunta de entrega: ${fmtDateTime(at)}` : item.owner === 'other' && item.deadline ? `Follow-up ${st.settings.followUpDaysBefore} dias antes e no dia` : ''}>
           <input type="datetime-local" value=${toInput(item.deadline)} onChange=${(e) => setDeadline(e.target.value)} /><//>
-        <${Field} label="Status"><select value=${item.status} onChange=${(e) => set({ status: e.target.value })}>${STATUS.map((s) => html`<option value=${s.value}>${s.label}</option>`)}</select><//>
+        <${Field} label="Status"><select value=${item.status} onChange=${(e) => set({ status: e.target.value })}>${(inGantt(item, st) || item.status === 'backlog' ? [BACKLOG, ...STATUS] : STATUS).map((s) => html`<option value=${s.value}>${s.label}</option>`)}</select><//>
       </div>
       <div class="grid2">
         <${Field} label="Prioridade"><${PrioPicker} value=${item.priority} onChange=${(v) => set({ priority: v })} /><//>

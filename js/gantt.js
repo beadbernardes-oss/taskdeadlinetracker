@@ -4,7 +4,7 @@ import { S, U, setUI, macroName } from './store.js';
 import { addDays, startOfWeek, dayKey, fmtDateTime, MO, WD } from './util.js';
 import { Icon, Prio, Avatar, Seg, Empty, openItem, openNew, applyFilters } from './ui.js';
 
-const STATUS_LBL = { todo: 'A fazer', doing: 'Em andamento', waiting: 'Aguardando', done: 'Concluído' };
+const STATUS_LBL = { backlog: 'Backlog', todo: 'A fazer', doing: 'Em andamento', waiting: 'Aguardando', done: 'Concluído' };
 const isPR = (st, id) => /product requirements/i.test(macroName(id) || '');
 
 // Entra no Gantt: marcado "Mostrar no Gantt", ou macrotema de Product Requirements (a não ser que desmarcado)
@@ -49,7 +49,7 @@ export function Gantt() {
   const open = all.filter((i) => i.status !== 'done');
   const overdue = open.filter((i) => i.deadline && new Date(i.deadline) < now).sort(byDue);
   const invalid = open.filter((i) => i.deadline && i.start && new Date(i.start) > new Date(i.deadline));
-  const tbd = open.filter((i) => !i.deadline);
+  const tbd = open.filter((i) => !i.deadline && i.status !== 'backlog'); // backlog ainda não precisa de data
   const soon = open.filter((i) => i.deadline && new Date(i.deadline) >= now && new Date(i.deadline) < addDays(now, 14)).sort(byDue);
 
   const groups = new Map();
@@ -150,7 +150,7 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
         <i style=${`width:${prog}%`}></i></span>
       ${e <= w.to && html`<span class=${`g-dl ${late ? 'late' : ''} pb-${i.priority}`} style=${`left:${pct(e)}%`} title=${`Prazo ${fmtDateTime(e)}`}><${Icon} n="diamond" s=${11} /></span>`}`;
   }
-  return html`<div class=${`g-row g-item ${i.status === 'done' ? 'is-done' : ''}`} onClick=${() => openItem(i.id)} role="button" tabindex="0" onKeyDown=${(ev) => { if (ev.key === 'Enter') openItem(i.id); }}>
+  return html`<div class=${`g-row g-item ${i.status === 'done' ? 'is-done' : ''} ${i.status === 'backlog' ? 'is-backlog' : ''}`} onClick=${() => openItem(i.id)} role="button" tabindex="0" onKeyDown=${(ev) => { if (ev.key === 'Enter') openItem(i.id); }}>
     <div class="g-left">
       <span class="g-c-task"><span class="g-title"><${Prio} p=${i.priority} /><b>${i.title}</b>${late && html`<span class="g-x" title="Vencido"><${Icon} n="diamond" s=${11} /></span>`}
         <span class="g-docs">${isTicket(i)
