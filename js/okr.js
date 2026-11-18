@@ -1,6 +1,6 @@
 // OKR3 Q4: painel (em inglês) com os números da aba Summary da planilha do piloto de PDV.
 // Os números ficam nos dados da usuária (S().okr3), não no código do site, que é público.
-// Duas seções, como na Summary: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes (+ lista de gaps).
+// Três seções: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes; 3) gap list.
 // Cores semânticas: verde = integrado/bom, vermelho = pendente de integração/problema,
 // âmbar hachurado = aguardando resposta, contorno vazio = sem resposta ou despriorizado.
 import { html, render } from './lib.js';
@@ -236,7 +236,7 @@ function PdvSection({ s2, d, e, u }) {
           <td><span class=${`ok-will w-${willCat(g)}`}>${WILL[willCat(g)]}</span></td>
           <td class="ok-status">${g.status || '—'}</td>
           <td class="num">${gm(g)}</td>
-          <td class="num ok-barcell"><span class="ok-ibar" aria-hidden="true" style=${`width:${pct(go(g), maxO)}%`}></span><span>${nOrd(go(g))}</span></td>
+          <td class="num ok-barcell"><span class="ok-bc"><span class="ok-ibar" aria-hidden="true" style=${`width:${pct(go(g), maxO)}%`}></span><span class="ok-bv">${nOrd(go(g))}</span></span></td>
           <td class="num">${p1(pct(go(g), e.orders[c]))}</td>
           <td>${g.seg}</td></tr>`)}
           ${!gapRows.length && html`<tr><td colspan="7" class="muted">No vendors in this group.</td></tr>`}
