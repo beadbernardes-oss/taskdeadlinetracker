@@ -205,9 +205,7 @@ function PdvSection({ s2, d, e, u }) {
         </span>
       </div>`)}
 
-      <button type="button" class="ok-toggle ok-table-toggle" aria-expanded=${!!u.okrPdvTable} onClick=${() => setUI({ okrPdvTable: !u.okrPdvTable })}>
-        ${u.okrPdvTable ? 'Hide table' : 'Show table'}<${Icon} n="right" s=${14} cls=${u.okrPdvTable ? 'open' : ''} /></button>
-      ${u.okrPdvTable && html`<div class="ok-tablewrap"><table class="ok-table ok-mt ok-pdv">
+      <div class="ok-tablewrap ok-pdv-wrap"><table class="ok-table ok-mt ok-pdv">
         <thead><tr><th scope="col">Metric</th>${CITIES.map((x) => html`<th scope="col" class="num">${x}</th>`)}</tr></thead>
         <tbody>
           <tr><th scope="row">Total mapped PDVs</th>${cnt('mapped')}</tr>
@@ -218,7 +216,7 @@ function PdvSection({ s2, d, e, u }) {
           <tr class="row-bad"><th scope="row" class="ok-sub">↳ Unwilling to cooperate</th>${withPct(s2.unwilling)}</tr>
         </tbody>
       </table></div>
-      <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>`}
+      <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>
     </div>
   </section>
 
