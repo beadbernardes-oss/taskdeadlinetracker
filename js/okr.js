@@ -278,7 +278,7 @@ function LaunchSection({ s4, u }) {
     <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
       summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${target}% of orders covered`} />
     ${!u.okrS4Hidden && html`<div id="ok-sec-4">
-      <p class="muted small ok-lead">A city is <b>secure to launch</b> as soon as any segment has at least ${target}% of its est. orders covered: on an integrated PDV or on a printer. The star marks each segment that reached the trigger.</p>
+      <p class="muted small ok-lead">A city is <b>secure to launch</b> as soon as any segment has at least ${target}% of its est. orders covered: on an integrated PDV or on a printer.</p>
       <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
           <header class="bc-head">
@@ -291,7 +291,7 @@ function LaunchSection({ s4, u }) {
           </header>
           ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const segOk = cov >= target;
             return html`<div class="bc-seg">
-              <div class="bc-seg-h"><b>${label}</b>${segOk && html`<span class="bc-star" title=${`${label}: trigger reached`}><${Icon} n="star" s=${13} /></span>`}</div>
+              <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
                 <tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
                 <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>

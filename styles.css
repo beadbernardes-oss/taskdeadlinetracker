@@ -845,8 +845,6 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-stamp.not .ic { fill: none; }
 .bc-seg { border-top: 1px solid var(--border); padding-top: 10px; }
 .bc-seg-h { display: flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 4px; }
-.bc-star { display: inline-grid; place-items: center; color: var(--ok); }
-.bc-star .ic { fill: currentColor; }
 .bc-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .bc-tab th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 0; }
 .bc-tab td { text-align: right; font-variant-numeric: tabular-nums; padding: 3px 0; }
