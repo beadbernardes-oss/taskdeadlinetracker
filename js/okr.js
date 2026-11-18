@@ -281,24 +281,27 @@ function PdvSection({ s2, d, e, u }) {
 }
 
 // ---------- Seção 4: prontidão para lançamento (battlecard entre cidades) ----------
-// Gatilho: em cada segmento (SKA Classic, Local Heroes, SMB), 50% dos pedidos cobertos (PDV integrado ou printer).
+// Gatilho por segmento, em % dos pedidos cobertos (PDV integrado ou printer): 70% SKA Classic e Local Heroes, 50% SMB.
 // A cidade ganha o selo "Secure to launch" assim que qualquer segmento dela passa do gatilho (cada cidade por si).
 const SEGS4 = [['ska', 'SKA Classic'], ['lh', 'Local Heroes'], ['smb', 'SMB']];
+const TRIG4 = { ska: 70, lh: 70, smb: 50 };
 function LaunchSection({ s4, u }) {
-  const target = s4.target || 50;
+  const T = (k) => TRIG4[k] ?? s4.target ?? 50;
   const cities = [1, 2, 3];
-  const passing = (i) => SEGS4.filter(([k]) => s4.seg[k].coveredPct[i] >= target);
+  const passing = (i) => SEGS4.filter(([k]) => s4.seg[k].coveredPct[i] >= T(k));
   const ready = (i) => passing(i).length > 0;
   const secure = cities.filter(ready);
   // Quem está mais perto do gatilho, para o cartão sem selo dizer o que falta
-  const closest = (i) => { const [k, l] = SEGS4.reduce((a, b) => (s4.seg[b[0]].coveredPct[i] > s4.seg[a[0]].coveredPct[i] ? b : a));
-    return `closest: ${l}, ${(target - s4.seg[k].coveredPct[i]).toFixed(1)} pts to go`; };
+  const short = (k, i) => T(k) - s4.seg[k].coveredPct[i];
+  const closest = (i) => { const [k, l] = SEGS4.reduce((a, b) => (short(b[0], i) < short(a[0], i) ? b : a));
+    return `closest: ${l}, ${short(k, i).toFixed(1)} pts to go`; };
+  const trigTxt = `${TRIG4.ska}% SKA Classic & Local Heroes · ${TRIG4.smb}% SMB`;
   return html`<section class="ok-sec">
     <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
-      summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${target}% of orders covered`} />
+      summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${trigTxt}`} />
     ${!u.okrS4Hidden && html`<div id="ok-sec-4" class="ok-battle-wrap">
-      <p class="muted small ok-lead"><b>Secure to launch:</b> any segment with ${target}%+ of its est. orders covered.</p>
-      <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: `${target}% trigger`, cls: 'lg-line' }] }]} />
+      <p class="muted small ok-lead"><b>Secure to launch:</b> SKA Classic or Local Heroes with ${TRIG4.ska}%+ of their est. orders covered, or SMB with ${TRIG4.smb}%+.</p>
+      <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: 'Trigger', cls: 'lg-line' }] }]} />
       <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
           <header class="bc-head">
@@ -309,7 +312,7 @@ function LaunchSection({ s4, u }) {
               </span>`
               : html`<span class="bc-stamp not"><${Icon} n="alert" s=${14} />Not yet · ${closest(i)}</span>`}
           </header>
-          ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const segOk = cov >= target;
+          ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const target = T(k); const segOk = cov >= target;
             return html`<div class="bc-seg">
               <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
