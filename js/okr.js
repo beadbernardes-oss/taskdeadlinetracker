@@ -277,8 +277,9 @@ function LaunchSection({ s4, u }) {
   return html`<section class="ok-sec">
     <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
       summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${target}% of orders covered`} />
-    ${!u.okrS4Hidden && html`<div id="ok-sec-4">
+    ${!u.okrS4Hidden && html`<div id="ok-sec-4" class="ok-battle-wrap">
       <p class="muted small ok-lead">A city is <b>secure to launch</b> as soon as any segment has at least ${target}% of its est. orders covered: on an integrated PDV or on a printer.</p>
+      <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: `${target}% trigger`, cls: 'lg-line' }] }]} />
       <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
           <header class="bc-head">
@@ -306,7 +307,7 @@ function LaunchSection({ s4, u }) {
             </div>`; })}
         </article>`; })}
       </div>
-      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab: SKA Classic = classic brands; Local Heroes = local brand candidates that meet the size criterion (still to be validated); SMB = every other store in the list. Covered = researched stores on an integrated PDV or on a printer, weighted by est. orders/day. Bar: solid = integrated, striped = printer; the line marks the ${target}% trigger.</p>
+      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab: SKA Classic = classic brands; Local Heroes = local brand candidates that meet the size criterion (still to be validated); SMB = every other store in the list. Covered = researched stores on an integrated PDV or on a printer, weighted by est. orders/day.</p>
     </div>`}
   </section>`;
 }

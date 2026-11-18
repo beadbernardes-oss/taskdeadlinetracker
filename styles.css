@@ -858,7 +858,13 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-track i { display: block; height: 100%; }
 .bc-track i:first-child { border-radius: 5px 0 0 5px; }
 .bc-track .ok-target { top: -4px; bottom: -4px; }
-@media (max-width: 1100px) { .ok-battle { grid-template-columns: 1fr; } }
+/* Polish: os cartões só ficam lado a lado quando cada um tem espaço (≥ ~300px); abaixo disso, um por linha */
+.ok-battle-wrap { container-type: inline-size; }
+@container (max-width: 940px) { .ok-battle { grid-template-columns: 1fr; } }
+.ok-legend i.lg-line { width: 2px; height: 12px; border-radius: 1px; background: var(--text); }
+.bc-cov-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ok-bc-card { container-type: inline-size; }
+@container (max-width: 300px) { .bc-cov-l small { display: none; } }
 /* Selo "Secure to launch" como carimbo de borracha: girado, borda dupla, tinta levemente gasta */
 .ok-bc-card { position: relative; }
 .bc-head { min-height: 44px; }
