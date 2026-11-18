@@ -290,8 +290,11 @@ function LaunchSection({ s4, u }) {
             return html`<div class="bc-seg">
               <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
-                <tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
-                <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>
+                ${g.brands
+                  ? html`<tr><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
+                      <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intBrands[i])}</td></tr>`
+                  : html`<tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
+                      <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>`}
                 <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
                 <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>
               </tbody></table>

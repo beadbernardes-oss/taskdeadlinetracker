@@ -139,14 +139,20 @@ function buildOkr() {
   const selfBuilt = (v) => /self.?built/.test(v);
   const lh = sheet('Local Heroes vs Classic SKA').getDataRange().getDisplayValues();
   const lhHead = lh.findIndex((r) => norm(r[0]) === 'city' && norm(r[1]) === 'brand' && norm(r[2]).indexOf('class') === 0);
+  const z = () => [0, 0, 0, 0];
   const cls = {};
+  // Marcas por segmento e cidade (battlecard): "brand list" e "of which are integrated" (coluna J "On integrated POS?" com Yes)
+  const brands = { ska: z(), lh: z() }; const intBrands = { ska: z(), lh: z() };
   if (lhHead >= 0) for (let i = lhHead + 1; i < lh.length; i++) {
     const r = lh[i]; if (!(r[0] in CITY_COL)) continue;
     const key = r[0] + '|' + norm(r[1]);
-    if (r[2] === 'SKA - Classic') cls[key] = 'ska';
-    else if (r[2] === 'SKA - Local Hero' && norm(r[7]) === 'yes') cls[key] = 'lh';
+    let k = null;
+    if (r[2] === 'SKA - Classic') k = 'ska';
+    else if (r[2] === 'SKA - Local Hero' && norm(r[7]) === 'yes') k = 'lh';
+    if (!k) continue;
+    cls[key] = k;
+    [0, CITY_COL[r[0]]].forEach((j) => { brands[k][j] += 1; if (/yes/.test(norm(r[9]))) intBrands[k][j] += 1; });
   }
-  const z = () => [0, 0, 0, 0];
   const BRK = ['noAnswer', 'printer', 'longTail', 'selfBuilt', 'orderingTool'];
   const bN = {}; const bO = {}; BRK.forEach((k) => { bN[k] = z(); bO[k] = z(); });
   const SEG = ['ska', 'lh', 'smb'];
@@ -185,14 +191,15 @@ function buildOkr() {
     let intPct = [0, 1, 2, 3].map((j) => (d.o[j] ? r1(100 * d.iO[j] / d.o[j]) : 0));
     let printerPct = calcPrinter;
     if (s3h >= 0) {
-      const label = { ska: 'SKA Classic merchant list', lh: 'Local Heroes merchant list', smb: 'SMB merchant list' }[k];
-      const i = findRow(sum, label, s3h);
+      const name = { ska: 'SKA Classic', lh: 'Local Heroes', smb: 'SMB' }[k];
+      let i; try { i = findRow(sum, name + ' merchant list', s3h); } catch (e) { i = findRow(sum, name + ' brand list', s3h); }
       const S = (row) => [3, 5, 7, 9].map((c) => num(sum[row][c]));
       const O = (row) => [4, 6, 8, 10].map((c) => num(sum[row][c]));
       stores = S(i); intStores = S(i + 1); intPct = O(i + 2);
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])) };
+    if (brands[k]) { seg4[k].brands = brands[k]; seg4[k].intBrands = intBrands[k]; }
   });
 
   return {
