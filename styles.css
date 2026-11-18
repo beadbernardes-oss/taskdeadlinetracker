@@ -903,3 +903,11 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 }
 .ok-bc-card.is-secure { animation: bc-thud .3s ease-out .9s; }
 @keyframes bc-thud { 0%, 100% { transform: none; } 35% { transform: translateY(1.5px); } }
+
+/* Delight nas seções 1 e 2: as barras das cidades enchem em sequência (X, Y, F, total) até a linha da meta */
+.kr-row .ok-sbar { animation: bc-fill .7s cubic-bezier(.16, 1, .3, 1) calc(var(--i, 0) * 80ms) backwards; }
+.kr-row .kr-ico.is-ok { animation: kr-pop .32s cubic-bezier(.3, 1.5, .5, 1) calc(.55s + var(--i, 0) * 80ms) backwards; }
+@keyframes kr-pop { from { transform: scale(0); } }
+.pdv-win { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin: 10px 0 12px; padding: 0 2px; color: var(--text); }
+.pdv-win i { flex: none; width: 14px; height: 14px; border-radius: 3px; margin-top: 2px; }
+.pdv-win b { color: var(--ok); }

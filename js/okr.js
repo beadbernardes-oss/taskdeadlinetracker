@@ -3,7 +3,7 @@
 // Quatro seções: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes; 3) gap list; 4) prontidão para lançamento.
 // Cores semânticas: verde = integrado/bom, vermelho = pendente de integração/problema,
 // âmbar hachurado = aguardando resposta, contorno vazio = sem resposta ou despriorizado.
-import { html, render } from './lib.js';
+import { html, render, useState, useEffect } from './lib.js';
 import { S, U, setUI } from './store.js';
 import { Seg, Icon, Empty } from './ui.js';
 
@@ -87,6 +87,20 @@ function Bar({ id, label, parts, total, split, target, labelFirst = true }) {
   </div>`;
 }
 
+// Número que sobe de 0 até o valor junto com as barras (some com "reduzir movimento")
+const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function CountUp({ v, fmt }) {
+  const [x, setX] = useState(calm() ? v : 0);
+  useEffect(() => {
+    if (calm()) { setX(v); return undefined; }
+    const t0 = performance.now(); let raf;
+    const step = (t) => { const k = Math.min(1, (t - t0) / 700); setX(v * (1 - (1 - k) ** 4)); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [v]);
+  return fmt(x);
+}
+
 function Status({ ok, children }) {
   return html`<span class=${`ok-status-pill ${ok ? 'is-ok' : 'is-bad'}`}><${Icon} n=${ok ? 'check' : 'alert'} s=${13} />${children}</span>`;
 }
@@ -131,7 +145,7 @@ function StoresSection({ s1, kr }) {
       <div class="kr-head">
         <div class="kr-title"><h3>Est. orders with PDV known by us</h3></div>
         <div class="kr-score">
-          <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}>${p1(avg3)}</span>
+          <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}><${CountUp} v=${avg3} fmt=${p1} /></span>
           <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of X, Y, F (${3} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
         </div>
       </div>
@@ -143,8 +157,8 @@ function StoresSection({ s1, kr }) {
       <${Legend} groups=${[{ title: 'PDV known', items: [ST.integrated, ST.gap] }, { title: 'PDV not known', items: [ST.pending, ST.noAnswer] }]} />
       <div class="kr-rows">
         <div class="kr-scale" aria-hidden="true"><span></span><span class="kr-ticks"><i style="left:0">0%</i><i class="t" style=${`left:${target}%`}>Target ${target}%</i><i style="left:100%">100%</i></span><span></span></div>
-        ${[1, 2, 3, 0].map((i) => { const ok = knownO(i) >= target;
-          return html`<div class=${`kr-row ${i === 0 ? 'total' : ''}`}>
+        ${[1, 2, 3, 0].map((i, j) => { const ok = knownO(i) >= target;
+          return html`<div class=${`kr-row ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
             <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${n0(s1.orders[i])} orders/day</small></span>
             <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${ordersParts(i)} total=${ordersParts(i).reduce((a, p) => a + p.v, 0)} split=${2} target=${target} />
             <span class="kr-val" title=${ok ? 'On track' : `${(target - knownO(i)).toFixed(1)} pts short of ${target}%`}><b class=${ok ? 'ok-txt-good' : 'ok-txt-bad'}>${p1(knownO(i))}</b><span class=${`kr-ico ${ok ? 'is-ok' : 'is-bad'}`} aria-label=${ok ? 'on track' : `${(target - knownO(i)).toFixed(1)} points short`}><${Icon} n=${ok ? 'check' : 'alert'} s=${14} /></span></span>
@@ -203,9 +217,11 @@ function PdvSection({ s2, d, e, u }) {
         <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
           ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
       </p>
+      ${s2.willing.n[0] > 0 && html`<p class="pdv-win"><i class="v-good-hatch" aria-hidden="true"></i>
+        <span><b>Quick win:</b> ${s2.willing.n[0]} willing PDV${s2.willing.n[0] === 1 ? '' : 's'} already hold ${p1(s2.willing.p[0])} of pending orders.</span></p>`}
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
       <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
-      ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`}>
+      ${[1, 2, 3, 0].map((i, j) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
         <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.pending[i]} on gap</small></span>
         <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} split=${1}
           parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))} of mapped PDVs` },
