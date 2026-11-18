@@ -91,6 +91,17 @@ function Status({ ok, children }) {
   return html`<span class=${`ok-status-pill ${ok ? 'is-ok' : 'is-bad'}`}><${Icon} n=${ok ? 'check' : 'alert'} s=${13} />${children}</span>`;
 }
 
+// Cabeçalho de seção que abre e fecha; fechada, mostra um resumo de uma linha
+function SecHead({ n, title, hideKey, summary }) {
+  const hidden = !!U()[hideKey];
+  return html`<header class="ok-sec-h">
+    <span class="ok-sec-n">${n}</span>
+    <h2><button type="button" class="ok-toggle ok-sec-toggle" aria-expanded=${!hidden} aria-controls=${`ok-sec-${n}`} onClick=${() => setUI({ [hideKey]: !hidden })}>
+      ${title}<${Icon} n="right" s=${16} cls=${hidden ? '' : 'open'} /></button></h2>
+    ${hidden && summary && html`<span class="muted small ok-sec-sum">${summary}</span>`}
+  </header>`;
+}
+
 // ---------- Seção 1: lojas e pedidos ----------
 function StoresSection({ s1, kr }) {
   const target = kr?.target ?? 50;
@@ -112,7 +123,9 @@ function StoresSection({ s1, kr }) {
     ...(s1.gapBreak && U().okrGapOpen ? [['ska', 'of which SKA'], ['smb', 'of which SMB']].map(([k, label]) => ({ k, label, sub2: true, br: true, tone: 'bad', src: 'gapBreak' })) : []),
   ];
   return html`<section class="ok-sec">
-    <header class="ok-sec-h"><span class="ok-sec-n">1</span><h2>Stores and orders</h2></header>
+    <${SecHead} n="1" title="Stores and orders" hideKey="okrS1Hidden"
+      summary=${`PDV known: ${p1(avg3)} of est. orders (average of X, Y, F) · target ${target}%`} />
+    ${!U().okrS1Hidden && html`<div id="ok-sec-1">
 
     <div class="ok-card ok-kr">
       <div class="kr-head">
@@ -162,6 +175,7 @@ function StoresSection({ s1, kr }) {
         </tbody>
       </table></div>
     </div>
+    </div>`}
   </section>`;
 }
 
@@ -182,7 +196,9 @@ function PdvSection({ s2, d, e, u }) {
   const WL = { willing: { label: 'Willing to cooperate now', cls: 'v-good-hatch' }, unwilling: { label: 'Unwilling to cooperate', cls: 'v-bad' } };
 
   return html`<section class="ok-sec">
-    <header class="ok-sec-h"><span class="ok-sec-n">2</span><h2>PDVs and pending orders</h2></header>
+    <${SecHead} n="2" title="PDVs and pending orders" hideKey="okrS2Hidden"
+      summary=${`${s2.mapped[0]} PDVs · ${s2.integrated[0]} integrated · ${s2.pending[0]} on gap · ${p1(s2.unwilling.p[0])} of pending orders unwilling`} />
+    ${!u.okrS2Hidden && html`<div id="ok-sec-2">
 
     <div class="ok-card">
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
@@ -218,16 +234,13 @@ function PdvSection({ s2, d, e, u }) {
       </table></div>
       <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>
     </div>
+    </div>`}
   </section>
 
   <section class="ok-sec">
-    <header class="ok-sec-h">
-      <span class="ok-sec-n">3</span>
-      <h2><button type="button" class="ok-toggle ok-sec-toggle" aria-expanded=${!u.okrGapHidden} aria-controls="ok-gaplist" onClick=${() => setUI({ okrGapHidden: !u.okrGapHidden })}>
-        Gap list: PDV vendors not integrated with Keeta<${Icon} n="right" s=${16} cls=${!u.okrGapHidden ? 'open' : ''} /></button></h2>
-      ${u.okrGapHidden && html`<span class="muted small ok-sec-sum">${d.gap.length} vendors · ${n0(e.gap[0])} merchants · ${p1(e.ordersGapPct[0])} of all est. orders</span>`}
-    </header>
-    ${!u.okrGapHidden && html`<div class="ok-card" id="ok-gaplist">
+    <${SecHead} n="3" title="Gap list: PDV vendors not integrated with Keeta" hideKey="okrGapHidden"
+      summary=${`${d.gap.length} vendors · ${n0(e.gap[0])} merchants · ${p1(e.ordersGapPct[0])} of all est. orders`} />
+    ${!u.okrGapHidden && html`<div class="ok-card" id="ok-sec-3">
       <div class="ok-card-h ok-filters">
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
         <div class="grow"></div>
