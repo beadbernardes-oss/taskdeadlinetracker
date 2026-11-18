@@ -223,12 +223,14 @@ function PdvSection({ s2, d, e, u }) {
       </table></div>
       <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>
     </div>
+  </section>
 
+  <section class="ok-sec">
+    <header class="ok-sec-h"><span class="ok-sec-n">3</span><h2>Gap list: PDV vendors not integrated with Keeta</h2></header>
     <div class="ok-card">
-      <div class="ok-card-h"><h3><span class="ok-dot v-bad"></span>Gap list: PDV vendors not integrated with Keeta</h3><div class="grow"></div>
-        <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
-      </div>
       <div class="ok-card-h ok-filters">
+        <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
+        <div class="grow"></div>
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
       </div>
       <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, "depends on brand signing" and "unresponsive" count as unwilling.</p>
