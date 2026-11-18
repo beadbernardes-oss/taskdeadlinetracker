@@ -831,3 +831,33 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .ok-sec-toggle { font-size: inherit; font-weight: inherit; letter-spacing: inherit; gap: 6px; }
 .ok-sec-sum { margin-left: 4px; }
 @media (max-width: 640px) { .ok-sec-h { flex-wrap: wrap; } .ok-sec-sum { flex-basis: 100%; margin-left: 36px; } }
+
+/* Seção 4: battlecard de prontidão por cidade */
+.ok-lead { margin: -4px 0 12px; }
+.ok-battle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ok-bc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ok-bc-card.is-secure { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok) inset; }
+.bc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.bc-head h3 { margin: 0; font-size: 16px; }
+.bc-stamp { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); text-transform: uppercase; letter-spacing: .03em; }
+.bc-stamp .ic { fill: currentColor; }
+.bc-stamp.not { background: var(--danger-soft); color: var(--p0-text); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.bc-stamp.not .ic { fill: none; }
+.bc-seg { border-top: 1px solid var(--border); padding-top: 10px; }
+.bc-seg-h { display: flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 4px; }
+.bc-star { display: inline-grid; place-items: center; color: var(--ok); }
+.bc-star .ic { fill: currentColor; }
+.bc-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.bc-tab th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 0; }
+.bc-tab td { text-align: right; font-variant-numeric: tabular-nums; padding: 3px 0; }
+.bc-tab tr:first-child th, .bc-tab tr:first-child td { color: var(--text); font-weight: 600; }
+.bc-tab tr.good td { color: var(--ok); } .bc-tab tr.bad td { color: var(--p0-text); }
+.bc-cov { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 4px 8px; margin-top: 8px; }
+.bc-cov-l { font-size: 12.5px; font-weight: 600; }
+.bc-cov-l small { font-weight: 400; color: var(--muted); }
+.bc-cov-v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bc-track { grid-column: 1 / -1; position: relative; display: flex; gap: 2px; height: 10px; border-radius: 5px; background: var(--v-empty); box-shadow: inset 0 0 0 1px var(--v-empty-line); }
+.bc-track i { display: block; height: 100%; }
+.bc-track i:first-child { border-radius: 5px 0 0 5px; }
+.bc-track .ok-target { top: -4px; bottom: -4px; }
+@media (max-width: 1100px) { .ok-battle { grid-template-columns: 1fr; } }

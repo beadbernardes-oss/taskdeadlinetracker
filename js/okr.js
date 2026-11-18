@@ -1,6 +1,6 @@
 // OKR3 Q4: painel (em inglês) com os números da aba Summary da planilha do piloto de PDV.
 // Os números ficam nos dados da usuária (S().okr3), não no código do site, que é público.
-// Três seções: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes; 3) gap list.
+// Quatro seções: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes; 3) gap list; 4) prontidão para lançamento.
 // Cores semânticas: verde = integrado/bom, vermelho = pendente de integração/problema,
 // âmbar hachurado = aguardando resposta, contorno vazio = sem resposta ou despriorizado.
 import { html, render } from './lib.js';
@@ -264,6 +264,49 @@ function PdvSection({ s2, d, e, u }) {
   </section>`;
 }
 
+// ---------- Seção 4: prontidão para lançamento (battlecard entre cidades) ----------
+// Gatilho: em cada segmento (SKA Classic, Local Heroes, SMB), 50% dos pedidos cobertos (PDV integrado ou printer).
+// A cidade ganha o selo "Secure to launch" quando os três segmentos passam do gatilho.
+const SEGS4 = [['ska', 'SKA Classic'], ['lh', 'Local Heroes'], ['smb', 'SMB']];
+function LaunchSection({ s4, u }) {
+  const target = s4.target || 50;
+  const cities = [1, 2, 3];
+  const ready = (i) => SEGS4.every(([k]) => s4.seg[k].coveredPct[i] >= target);
+  const secure = cities.filter(ready);
+  return html`<section class="ok-sec">
+    <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
+      summary=${`Secure to launch: ${secure.length ? secure.map((i) => CITIES[i]).join(', ') : 'none yet'} · trigger ${target}% of orders covered in every segment`} />
+    ${!u.okrS4Hidden && html`<div id="ok-sec-4">
+      <p class="muted small ok-lead">A city is <b>secure to launch</b> when, in every segment, at least ${target}% of est. orders are covered: on an integrated PDV or on a printer.</p>
+      <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const short = SEGS4.filter(([k]) => s4.seg[k].coveredPct[i] < target);
+        return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
+          <header class="bc-head">
+            <h3>City ${CITIES[i]}</h3>
+            ${ok ? html`<span class="bc-stamp"><${Icon} n="star" s=${15} />Secure to launch</span>`
+              : html`<span class="bc-stamp not"><${Icon} n="alert" s=${14} />Not yet · ${short.map(([, l]) => l).join(', ')} below ${target}%</span>`}
+          </header>
+          ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const segOk = cov >= target;
+            return html`<div class="bc-seg">
+              <div class="bc-seg-h"><b>${label}</b>${segOk && html`<span class="bc-star" title=${`${label}: trigger reached`}><${Icon} n="star" s=${13} /></span>`}</div>
+              <table class="bc-tab"><tbody>
+                <tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
+                <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>
+                <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
+                <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>
+              </tbody></table>
+              <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
+                <span class="bc-cov-l">Orders covered <small>(integrated + printer)</small></span>
+                <span class=${`bc-cov-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(cov)}</span>
+                <span class="bc-track"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i><span class="ok-target" style=${`left:${target}%`}></span></span>
+              </div>
+            </div>`; })}
+        </article>`; })}
+      </div>
+      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab: SKA Classic = classic brands; Local Heroes = local brand candidates that meet the size criterion (still to be validated); SMB = every other store in the list. Covered = researched stores on an integrated PDV or on a printer, weighted by est. orders/day. Bar: solid = integrated, striped = printer; the line marks the ${target}% trigger.</p>
+    </div>`}
+  </section>`;
+}
+
 export function Okr() {
   const d = S().okr3; const u = U();
   if (!d || !d.s1 || !d.s2) return html`<div class="view okr"><${Empty} text="No OKR3 data yet." icon="list" /></div>`;
@@ -275,5 +318,6 @@ export function Okr() {
     </div>
     <${StoresSection} s1=${d.s1} kr=${d.kr} />
     <${PdvSection} s2=${d.s2} d=${d} e=${d.exec} u=${u} />
+    ${d.s4 && html`<${LaunchSection} s4=${d.s4} u=${u} />`}
   </div>`;
 }
