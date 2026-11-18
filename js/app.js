@@ -5,7 +5,7 @@ import { parseQuick } from './util.js';
 import { Icon, Seg, openNew } from './ui.js';
 import { startCloud, sendLink, signOut, signInPassword } from './cloud.js';
 import { Today, Week, Kanban, Meetings, People } from './views.js';
-import { Gantt } from './gantt.js';
+import { Gantt, ItemView } from './gantt.js';
 import { Okr } from './okr.js';
 import { ItemDrawer, OccDrawer, AskModal, PostponeModal, PautaModal, SeriesModal, IcsModal, SettingsModal, NotifPanel } from './editors.js';
 
@@ -18,7 +18,10 @@ const ROUTES = [
   { id: 'reunioes', label: 'Reuniões', icon: 'list', C: Meetings },
   { id: 'pessoas', label: 'Pessoas', icon: 'users', C: People },
 ];
-const routeOf = () => { const r = location.hash.replace(/^#\/?/, '').split('/')[0]; return ROUTES.find((x) => x.id === r) || ROUTES[0]; };
+// Quem só vê a vitrine (head) enxerga apenas o Gantt e o OKR3
+const VIEW_ROUTES = ROUTES.filter((r) => r.id === 'gantt' || r.id === 'okr3');
+const routesFor = () => (U().viewer ? VIEW_ROUTES : ROUTES);
+const routeOf = () => { const list = routesFor(); const r = location.hash.replace(/^#\/?/, '').split('/')[0]; return list.find((x) => x.id === r) || list[0]; };
 
 function Filters() {
   const f = U().filters; const st = S();
@@ -97,6 +100,33 @@ function SyncDot() {
     <button class="btn btn-ghost btn-xs" onClick=${() => { if (confirm('Sair desta conta neste aparelho?')) signOut(); }}>Sair</button></div>`;
 }
 
+// App de quem só vê a vitrine: Gantt e OKR3, somente leitura, sem alertas nem edição
+function ViewerApp() {
+  const u = U(); const route = routeOf(); const View = route.C; const d = u.drawer;
+  if (u.cloud === 'out' || u.cloud === 'loading' || (u.cloud === 'error' && !u.email)) return html`<${Login} />`;
+  return html`<div class="app viewer">
+    <aside class="side">
+      <div class="brand"><span class="logo"><${Icon} n="check" s=${16} /></span><div><b>Tracker</b><span>Gantt e OKR3 · somente leitura</span></div></div>
+      <nav class="nav">${VIEW_ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} /><span>${r.label}</span></a>`)}</nav>
+      <div class="grow"></div>
+      <${SyncDot} />
+    </aside>
+    <main class="main">
+      <header class="top">
+        <h1>${route.label}</h1>
+        <div class="grow"></div>
+        <span class="ro-badge" title=${u.viewUpdatedAt ? `Atualizado em ${new Date(u.viewUpdatedAt).toLocaleString('pt-BR')}` : ''}><${Icon} n="user" s=${14} />Somente leitura</span>
+      </header>
+      <div class="content"><${View} /></div>
+    </main>
+    <nav class="tabbar">${VIEW_ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} s=${20} /><span>${r.short || r.label}</span></a>`)}</nav>
+    ${d && d.type === 'item' && html`<div class="drawer-bg" onClick=${(e) => { if (e.target === e.currentTarget) setUI({ drawer: null }); }}>
+      <aside class="drawer"><${ItemView} id=${d.id} key=${d.id} /></aside>
+    </div>`}
+    ${u.toast && html`<div class="toast" role="status">${u.toast}</div>`}
+  </div>`;
+}
+
 function App() {
   const [, force] = useState(0);
   const [route, setRoute] = useState(routeOf());
@@ -104,8 +134,8 @@ function App() {
   useEffect(() => {
     const onHash = () => { setRoute(routeOf()); setUI({ drawer: null, notifOpen: false }); window.scrollTo(0, 0); };
     addEventListener('hashchange', onHash);
-    const t = setInterval(() => { tick(); force((x) => x + 1); }, 30000);
-    const onVis = () => { if (!document.hidden) { tick(); force((x) => x + 1); } };
+    const t = setInterval(() => { if (!U().viewer) tick(); force((x) => x + 1); }, 30000);
+    const onVis = () => { if (!document.hidden) { if (!U().viewer) tick(); force((x) => x + 1); } };
     document.addEventListener('visibilitychange', onVis);
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
@@ -116,12 +146,13 @@ function App() {
       else if (questions(S(), new Date()).length && x.askSnoozeUntil < Date.now()) setUI({ askSnoozeUntil: Date.now() + 30 * 60000 });
     };
     document.addEventListener('keydown', onKey);
-    tick();
+    if (!U().viewer) tick();
     return () => { removeEventListener('hashchange', onHash); clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
   }, []);
   useEffect(() => { document.documentElement.dataset.theme = S().settings.theme === 'auto' ? '' : S().settings.theme; });
 
   const st = S(); const u = U(); const now = new Date();
+  if (u.viewer) return html`<${ViewerApp} route=${routeOf()} />`;
   const qs = questions(st, now);
   const nUnread = unread();
   const counts = {

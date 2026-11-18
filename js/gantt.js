@@ -24,6 +24,7 @@ function DocChip({ i, kind }) {
   const url = i[kind]; const lbl = kind.toUpperCase();
   if (isUrl(url)) return html`<a class=${`g-dc on ${kind}`} href=${url} target="_blank" rel="noopener" onClick=${(ev) => ev.stopPropagation()} title=${`Abrir ${lbl}`}>${lbl}</a>`;
   const tip = kind === 'mrd' ? 'MRD pendente · você escreve (clique para adicionar o link)' : 'PRD pendente · o time de produto escreve (clique para adicionar o link)';
+  if (U().viewer) return html`<span class=${`g-dc off ${kind}`} title=${`${lbl} pendente`}>${lbl}</span>`;
   return html`<button class=${`g-dc off ${kind}`} title=${tip} onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>${lbl}</button>`;
 }
 const fmtD = (d) => { d = new Date(d); return `${d.getDate()} ${MO[d.getMonth()]}`; };
@@ -78,7 +79,7 @@ export function Gantt() {
       <${Seg} small value=${scale} onChange=${(v) => setUI({ ganttScale: v, ganttOffset: 0 })} options=${[{ value: 'week', label: 'Semanas' }, { value: 'day', label: 'Dias' }]} />
       <${Seg} small value=${group} onChange=${(v) => setUI({ ganttGroup: v })} options=${[{ value: 'owner', label: 'Por PM' }, { value: 'macro', label: 'Por macrotema' }]} />
       <label class="check small"><input type="checkbox" checked=${showDone} onChange=${(e) => setUI({ ganttDone: e.target.checked })} />Concluídas</label>
-      <button class="btn btn-sm btn-primary" onClick=${() => newIn(group === 'owner' ? 'A definir' : 'Product Requirements')}><${Icon} n="plus" s=${15} />Entrega</button>
+      ${!u.viewer && html`<button class="btn btn-sm btn-primary" onClick=${() => newIn(group === 'owner' ? 'A definir' : 'Product Requirements')}><${Icon} n="plus" s=${15} />Entrega</button>`}
     </div>
 
     <div class="g-attn">
@@ -125,7 +126,7 @@ export function Gantt() {
             <div class="g-tl g-gmeta">
               ${next && html`<span class="muted">Próximo prazo <b class="ink">${fmtD(next.deadline)}</b></span>`}
               <span class="g-mini"><i style=${`width:${done.length ? (nd / done.length) * 100 : 0}%`}></i></span><span class="muted small">${nd}/${done.length} concluídas</span>
-              <button class="btn btn-icon btn-xs" aria-label=${`Nova entrega em ${k}`} onClick=${(e) => { e.stopPropagation(); newIn(k); }}><${Icon} n="plus" s=${14} /></button>
+              ${!u.viewer && html`<button class="btn btn-icon btn-xs" aria-label=${`Nova entrega em ${k}`} onClick=${(e) => { e.stopPropagation(); newIn(k); }}><${Icon} n="plus" s=${14} /></button>`}
             </div>
           </div>
           ${!collapsed[k] && list.map((i) => html`<${GRow} i=${i} w=${w} pct=${pct} now=${now} todayIn=${todayIn} scale=${scale} />`)}`; })}
@@ -139,8 +140,9 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
   const late = e && e < now && i.status !== 'done';
   const prog = i.status === 'done' ? 100 : (i.progress || 0);
   let tl;
-  if (!e) tl = html`<span class="g-note"><button class="g-link" onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>Sem prazo · Definir data</button></span>`;
-  else if (i.start && s > e) tl = html`<span class="g-note warn">Datas inválidas · <button class="g-link warn" onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>Corrigir</button></span>`;
+  const ro = U().viewer;
+  if (!e) tl = ro ? html`<span class="g-note">Sem prazo definido</span>` : html`<span class="g-note"><button class="g-link" onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>Sem prazo · Definir data</button></span>`;
+  else if (i.start && s > e) tl = ro ? html`<span class="g-note warn">Datas inválidas</span>` : html`<span class="g-note warn">Datas inválidas · <button class="g-link warn" onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>Corrigir</button></span>`;
   else if (e < w.from) tl = html`<span class="g-note">‹ ${i.status === 'done' ? `Concluído · prazo ${fmtD(e)}` : `Vencido · prazo ${fmtD(e)}`}</span>`;
   else if (s >= w.to) tl = html`<span class="g-note right">Começa ${fmtD(s)} ›</span>`;
   else {
@@ -165,6 +167,32 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
       ${scale === 'day' && html`<span class="g-we">${w.cols.map((c) => html`<i class=${c.getDay() % 6 === 0 ? 'we' : ''}></i>`)}</span>`}
       ${todayIn && html`<span class="g-today" style=${`left:${pct(now)}%`}></span>`}
       ${tl}
+    </div>
+  </div>`;
+}
+
+// Detalhe de uma entrega, somente leitura (para quem vê a vitrine)
+export function ItemView({ id }) {
+  const i = S().items.find((x) => x.id === id);
+  const close = () => setUI({ drawer: null });
+  if (!i) return html`<div class="drawer-in"><header class="drawer-h"><div class="grow"></div><button class="btn btn-icon" aria-label="Fechar" onClick=${close}><${Icon} n="x" /></button></header><div class="drawer-b"><${Empty} text="Esta entrega não está mais no Gantt." /></div></div>`;
+  const prog = i.status === 'done' ? 100 : (i.progress || 0);
+  const link = (u, lbl) => (isUrl(u) ? html`<a class="doclink" href=${u} target="_blank" rel="noopener"><${Icon} n="link" s=${13} />${lbl}</a>` : html`<span class="muted">${lbl} pendente</span>`);
+  const row = (k, v) => html`<div class="iv-row"><span class="iv-k">${k}</span><span class="iv-v">${v}</span></div>`;
+  return html`<div class="drawer-in">
+    <header class="drawer-h"><span class="drawer-kicker">Entrega · somente leitura</span><div class="grow"></div><button class="btn btn-icon" aria-label="Fechar" onClick=${close}><${Icon} n="x" /></button></header>
+    <div class="drawer-b item-view">
+    <h2 class="iv-title"><${Prio} p=${i.priority} /> ${i.title}</h2>
+    <div class="iv-grid">
+      ${row('Responsável', html`<span class="iv-owner"><${Avatar} name=${ownerKey(i)} size=${20} />${ownerKey(i)}</span>`)}
+      ${row('Status', html`<span class=${`g-status st-${i.status}`}>${STATUS_LBL[i.status] || i.status}</span>`)}
+      ${row('Macrotema', macroName(i.macrotemaId) || '—')}
+      ${row('Início', i.start ? fmtD(i.start) : '—')}
+      ${row('Prazo', i.deadline ? fmtDateTime(i.deadline) : 'Sem prazo definido')}
+      ${row('Progresso', `${prog}%`)}
+    </div>
+    <div class="iv-links">${isTicket(i) ? link(ticketUrl(i), 'Ticket') : html`${link(i.mrd, 'MRD')}${link(i.prd, 'PRD')}`}${isUrl(i.link) && !isTicket(i) ? link(i.link, 'Outro link') : ''}</div>
+    ${i.notes && html`<div class="iv-notes"><span class="iv-k">Notas</span><p>${i.notes}</p></div>`}
     </div>
   </div>`;
 }

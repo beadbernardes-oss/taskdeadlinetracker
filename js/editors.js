@@ -5,7 +5,7 @@ import {
 } from './store.js';
 import { questions, followUp, risk, isOpen, isMine, alertTime } from './engine.js';
 import { enablePush, disablePush, sendTest, pushSupport, pushEnabledHere, pushDiagnose } from './push.js';
-import { setPassword } from './cloud.js';
+import { setPassword, listViewers, addViewer, removeViewer } from './cloud.js';
 import { newPrep } from './prep.js';
 import { inGantt, isTicket } from './gantt.js';
 import { occurrenceByKey, occurrencesBetween, recurText, nextOccurrence, ensureOcc, parseICS, isFutureRelevant, hasPerson } from './meetings.js';
@@ -562,6 +562,29 @@ function PushBox() {
   </div>`;
 }
 
+// Compartilhar só o Gantt e o OKR3 (somente leitura) com outra pessoa, pelo e-mail dela
+function ShareBox() {
+  const [list, setList] = useState(null); const [email, setEmail] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const reload = () => listViewers().then((l) => { setList(l); setErr(''); }).catch((e) => setErr(/shared_access|relation|schema cache/i.test(e.message) ? 'Falta rodar o SQL supabase/schema-4-compartilhar.sql no Supabase.' : e.message));
+  useEffect(() => { reload(); }, []);
+  const add = async (e) => {
+    e.preventDefault(); setBusy(true);
+    try { await addViewer(email); setEmail(''); await reload(); toast('Acesso liberado ao Gantt e ao OKR3.'); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  };
+  return html`<div class="set-sec">
+    <h4>Compartilhar Gantt e OKR3</h4>
+    <p class="muted small">A pessoa entra com o e-mail dela e vê só as abas Gantt Product Requirements e OKR3 Q4, sem poder editar. Suas outras tarefas, reuniões e pautas não aparecem.</p>
+    ${list && list.length > 0 && html`<ul class="share-list">${list.map((v) => html`<li><${Icon} n="user" s=${14} /><span>${v.viewer_email}</span>
+      <button class="btn btn-ghost btn-xs" onClick=${async () => { if (!confirm(`Tirar o acesso de ${v.viewer_email}?`)) return; try { await removeViewer(v.viewer_email); await reload(); toast('Acesso removido.'); } catch (x) { setErr(x.message); } }}>Remover</button></li>`)}</ul>`}
+    <form class="row" onSubmit=${add}>
+      <input type="email" placeholder="E-mail da pessoa" value=${email} onInput=${(e) => setEmail(e.target.value)} required />
+      <button class="btn btn-sm btn-primary" disabled=${busy}>${busy ? 'Aguarde…' : 'Dar acesso'}</button>
+    </form>
+    ${err && html`<p class="warn-txt">${err}</p>`}
+  </div>`;
+}
+
 export function SettingsModal() {
   const st = S(); const s = st.settings;
   const setS = (p) => mutate((x) => { Object.assign(x.settings, p); });
@@ -571,6 +594,7 @@ export function SettingsModal() {
   const hours = [...Array(24)].map((_, h) => h);
   return html`<${Modal} title="Configurações" size="lg">
     <${PasswordBox} />
+    <${ShareBox} />
     <div class="set-sec">
       <h4>Macrotemas</h4>
       <div class="macro-edit">
