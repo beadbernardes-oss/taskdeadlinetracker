@@ -17,7 +17,7 @@ const p1 = (v) => `${(Math.round(v * 10) / 10).toFixed(1)}%`;
 const pct = (a, b) => (b ? (a / b) * 100 : 0);
 const fmtDay = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 // Categorias da gap list, a partir da coluna Willingness e do TIMs status da Summary
-const WILL = { willing: 'Willing', unwilling: 'Unwilling', brand: 'Depends on brand signing', unresponsive: 'Unresponsive' };
+const WILL = { willing: 'Willing', unwilling: 'Unwilling', brand: 'Depends on brand', unresponsive: 'Unresponsive' };
 const WILL_ORDER = ['willing', 'unwilling', 'brand', 'unresponsive'];
 const willCat = (g) => {
   const w = (g.will || '').toLowerCase();
@@ -224,11 +224,11 @@ function PdvSection({ s2, d, e, u }) {
     <header class="ok-sec-h"><span class="ok-sec-n">3</span><h2>Gap list: PDV vendors not integrated with Keeta</h2></header>
     <div class="ok-card">
       <div class="ok-card-h ok-filters">
-        <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
-        <div class="grow"></div>
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
+        <div class="grow"></div>
+        <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
       </div>
-      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, "depends on brand signing" and "unresponsive" count as unwilling.</p>
+      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, "depends on brand" and "unresponsive" count as unwilling.</p>
       <div class="ok-tablewrap"><table class="ok-table ok-gap">
         <thead><tr><th scope="col">PDV vendor</th><th scope="col">Willingness</th><th scope="col">TIMs status</th><th scope="col" class="num">Merchants</th><th scope="col" class="num">Est. orders/day</th><th scope="col" class="num">% of all orders</th><th scope="col">Segment</th></tr></thead>
         <tbody>${gapRows.map((g) => html`<tr>
