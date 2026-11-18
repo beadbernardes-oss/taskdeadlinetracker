@@ -1,10 +1,13 @@
 // OKR3 Q4: painel (em inglês) com os números da aba Summary da planilha do piloto de PDV.
 // Os números ficam nos dados da usuária (S().okr3), não no código do site, que é público.
+// Cores semânticas: verde = integrado (bom), vermelho = gap (problema), âmbar = sem resposta (ação),
+// cinza = sem PDV (status conhecido, nada a integrar), contorno vazio = ainda não pesquisado.
 import { html, render } from './lib.js';
 import { S, U, setUI } from './store.js';
 import { Seg, Icon, Empty } from './ui.js';
 
 const CITIES = ['Total', 'X', 'Y', 'F'];
+const cityName = (x) => (x === 'Total' ? 'All cities' : x);
 const nf = new Intl.NumberFormat('en-US');
 const n0 = (v) => nf.format(Math.round(v));
 const n1 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -14,20 +17,14 @@ const pct = (a, b) => (b ? (a / b) * 100 : 0);
 const fmtDay = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 const WILL = { willing: 'Willing', unwilling: 'Unwilling', 'self built': 'Self-built', '': 'No answer' };
 
-// Composição da lista de lojas. Cada situação tem sempre a mesma cor, em todas as barras.
-const SEGS = [
-  { k: 'int', label: 'On an integrated POS', cls: 's1' },
-  { k: 'gap', label: 'On a non-integrated POS (gap)', cls: 's2' },
-  { k: 'nopos', label: 'No POS (printer, ordering tool, self-built)', cls: 's3' },
-  { k: 'open', label: 'Unresolved (no response, pending KAM)', cls: 'sn1' },
-  { k: 'todo', label: 'Not researched yet', cls: 'sn2' },
-];
-// No gráfico de pedidos, o resto (sem PDV + sem resposta + não pesquisado) é hachurado: não é a mesma coisa que "not researched"
-const REST = { label: 'Everything else (no POS, unresolved, not researched)', cls: 'rest' };
-function comp(e, c) {
-  const nopos = e.printer[c] + e.excluded[c];
-  return { int: e.integrated[c], gap: e.gap[c], nopos, open: e.covered[c] - e.pos[c] - nopos, todo: e.merchants[c] - e.covered[c] };
-}
+// Situações, sempre com a mesma cor e o mesmo nome em todo o painel
+const ST = {
+  good: { label: 'On an integrated POS', cls: 'v-good' },
+  bad: { label: 'On a POS not integrated (gap)', cls: 'v-bad' },
+  na: { label: 'No POS (printer, ordering tool, self-built)', cls: 'v-na' },
+  wait: { label: 'Unresolved (no response, pending KAM)', cls: 'v-wait' },
+  todo: { label: 'Not researched yet', cls: 'v-empty' },
+};
 
 // Dica flutuante: um único elemento fora do painel, atualizado direto (o painel não é redesenhado a cada movimento do mouse)
 let tipEl = null; let tipKey = null;
@@ -43,7 +40,7 @@ function showTip(x, y, key, content) {
   tipEl.style.top = `${y + 12 + h > window.innerHeight - 8 ? y - h - 12 : y + 12}px`;
 }
 function hideTip() { if (tipEl && !tipEl.hidden) { tipEl.hidden = true; tipKey = null; } }
-// Fecha ao rolar, ao tocar fora de uma barra, com Esc e ao trocar de aba (no iPhone a dica ficava presa)
+// Fecha ao rolar, ao tocar fora de uma barra, com Esc e ao trocar de aba
 addEventListener('scroll', hideTip, { capture: true, passive: true });
 addEventListener('pointerdown', (ev) => { if (!ev.target.closest?.('.ok-seg')) hideTip(); }, { capture: true });
 addEventListener('keydown', (ev) => { if (ev.key === 'Escape') hideTip(); });
@@ -55,36 +52,64 @@ const segTip = (key, content) => ({
   onClick: (ev) => showTip(ev.clientX, ev.clientY, key, content),
 });
 
-function Legend({ items }) {
-  return html`<div class="ok-legend">${items.map((s) => html`<span><i class=${s.cls}></i>${s.label}</span>`)}</div>`;
+function Legend({ groups }) {
+  return html`<div class="ok-legend">${groups.map((g) => html`<span class="lg-group">${g.title && html`<b>${g.title}</b>`}
+    ${g.items.map((s) => html`<span><i class=${s.cls}></i>${s.label}</span>`)}</span>`)}</div>`;
 }
 
-function StackRow({ id, label, sub, parts, total, on }) {
-  const shown = parts.filter((p) => p.v > 0).map((p) => ({ ...p, w: pct(p.v, total), text: p.text || `${n0(p.v)} merchants · ${p1(pct(p.v, total))}` }));
-  // Teclado e leitor de tela: a barra inteira é um item focável com o resumo de todas as partes
+// Barra empilhada: segmentos proporcionais, focável pelo teclado, com resumo para leitor de tela.
+// `split` = índice do primeiro segmento "desconhecido" (abre um respiro visual entre conhecido e não conhecido).
+function Bar({ id, label, parts, total, split, target, labelFirst = true }) {
+  const shown = parts.map((p, i) => ({ ...p, i, w: pct(p.v, total) })).filter((p) => p.v > 0);
   const summary = `${label}: ${shown.map((p) => `${p.label}, ${p.text}`).join('; ')}`;
   const all = html`<b>${label}</b>${shown.map((p) => html`<span class="tip-row"><i class=${p.cls}></i>${p.label}<span class="ink">${p.text}</span></span>`)}`;
-  return html`<div class=${`ok-srow ${on ? 'on' : ''}`}>
-    <span class="ok-slabel" aria-hidden="true"><b>${label}</b>${sub && html`<small>${sub}</small>`}</span>
+  return html`<div class="ok-track">
     <div class="ok-sbar" role="img" tabindex="0" aria-label=${summary}
       onFocus=${(ev) => { const r = ev.currentTarget.getBoundingClientRect(); showTip(r.left, r.bottom - 6, `${id}|all`, all); }} onBlur=${hideTip}>
-      ${shown.map((p) => html`<span class=${`ok-seg ${p.cls}`} style=${`flex:${p.w} 1 0`}
-        ...${segTip(`${id}|${p.cls}`, html`<b>${label}</b><span>${p.label}</span><span class="ink">${p.text}</span>`)}>
-        ${p.cls === 's1' && p.w >= 8 ? html`<em>${Math.round(p.w)}%</em>` : ''}</span>`)}
+      ${shown.map((p) => html`<span class=${`ok-seg ${p.cls} ${split != null && p.i === split ? 'split' : ''}`} style=${`flex:${p.w} 1 0`}
+        ...${segTip(`${id}|${p.i}`, html`<b>${label}</b><span>${p.label}</span><span class="ink">${p.text}</span>`)}>
+        ${labelFirst && p.i === 0 && p.w >= 9 ? html`<em>${Math.round(p.w)}%</em>` : ''}</span>`)}
     </div>
+    ${target != null && html`<span class="ok-target" style=${`left:${target}%`} aria-hidden="true"></span>`}
   </div>`;
 }
 
-function Tile({ label, value, sub, hero }) {
-  return html`<div class=${`ok-tile ${hero ? 'hero' : ''}`}><span class="ok-tl">${label}</span><b>${value}</b><span class="ok-ts">${sub}</span></div>`;
+function Status({ ok, children }) {
+  return html`<span class=${`ok-status-pill ${ok ? 'is-ok' : 'is-bad'}`}><${Icon} n=${ok ? 'check' : 'alert'} s=${13} />${children}</span>`;
+}
+
+function Signal({ tone, icon, label, value, unit, sub }) {
+  return html`<div class=${`ok-signal t-${tone}`}>
+    <span class="sg-icon"><${Icon} n=${icon} s=${16} /></span>
+    <span class="sg-label">${label}</span>
+    <span class="sg-value"><b>${value}</b>${unit && html`<small>${unit}</small>`}</span>
+    <span class="sg-sub">${sub}</span>
+  </div>`;
 }
 
 export function Okr() {
   const d = S().okr3; const u = U();
   if (!d) return html`<div class="view okr"><${Empty} text="No OKR3 data yet." icon="list" /></div>`;
-  const e = d.exec; const c = CITIES.indexOf(u.okrCity || 'Total'); const city = CITIES[c];
+  const e = d.exec; const kr = d.kr;
+  const c = CITIES.indexOf(u.okrCity || 'Total'); const city = CITIES[c];
   const scope = c === 0 ? 'all cities' : `city ${city}`;
-  const ordInt = e.orders[c] * e.ordersIntegratedPct[c] / 100;
+
+  // Pedidos estimados por situação, por cidade (base da KR)
+  const orders = (i) => {
+    const tot = e.orders[i]; const good = tot * e.ordersIntegratedPct[i] / 100; const bad = tot * e.ordersGapPct[i] / 100;
+    const known = kr ? kr.known[i] : good + bad; const covered = kr ? kr.covered[i] : known;
+    return { tot, good, bad, na: Math.max(0, known - good - bad), wait: Math.max(0, covered - known), todo: Math.max(0, tot - covered), known, knownPct: pct(known, tot) };
+  };
+  const O = CITIES.map((_, i) => orders(i));
+  const target = kr ? kr.target : null;
+  const avg3 = (O[1].knownPct + O[2].knownPct + O[3].knownPct) / 3;
+  const below = kr ? [1, 2, 3].filter((i) => O[i].knownPct < target) : [];
+
+  // Lojas por situação
+  const merch = (i) => {
+    const na = e.printer[i] + e.excluded[i];
+    return { good: e.integrated[i], bad: e.gap[i], na, wait: e.covered[i] - e.pos[i] - na, todo: e.merchants[i] - e.covered[i] };
+  };
 
   // Lista de gaps no recorte escolhido (Total = X + Y + F)
   const gm = (g) => (c === 0 ? g.m.reduce((a, b) => a + b, 0) : g.m[c - 1]);
@@ -94,50 +119,73 @@ export function Okr() {
   const gapRows = gapAll.filter((g) => will === 'all' || (g.will || '') === will);
   const maxO = Math.max(1, ...gapAll.map(go));
   const willCount = (w) => gapAll.filter((g) => (g.will || '') === w).length;
-
-  const rows = CITIES.map((name, i) => ({ name, i, cp: comp(e, i) }));
   const T = (label, key, fmt = n0) => html`<tr><th scope="row">${label}</th>${CITIES.map((_, i) => html`<td class=${i === c ? 'on' : ''}>${fmt(e[key][i])}</td>`)}</tr>`;
+
+  const orderParts = (o) => ['good', 'bad', 'na', 'wait', 'todo'].map((k) => ({ v: o[k], cls: ST[k].cls, label: ST[k].label, text: `${p1(pct(o[k], o.tot))} · ≈ ${n0(o[k])} orders/day` }));
+  const krOrder = [1, 2, 3, 0];
 
   return html`<div class="view okr">
     <div class="toolbar">
       <div class="ok-head"><h2>Epicenters POS coverage</h2><span class="muted small">Data as of ${fmtDay(d.asOf)} · ${scope}</span></div>
       <div class="grow"></div>
-      <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: x === 'Total' ? 'All cities' : x }))} />
+      <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
       ${d.source && html`<a class="btn btn-sm" href=${d.source} target="_blank" rel="noopener"><${Icon} n="link" s=${14} />Summary sheet</a>`}
     </div>
 
-    <div class="ok-tiles">
-      <${Tile} hero label="Est. orders on an integrated POS" value=${p1(e.ordersIntegratedPct[c])} sub=${`≈ ${n0(ordInt)} of ${n0(e.orders[c])} est. orders/day`} />
-      <${Tile} label="Discovery coverage" value=${p1(pct(e.covered[c], e.merchants[c]))} sub=${`${n0(e.covered[c])} of ${n0(e.merchants[c])} merchants researched`} />
-      <${Tile} label="POS merchants on an integrated POS" value=${p1(e.posIntegratedPct[c])} sub=${`${n0(e.integrated[c])} of ${n0(e.pos[c])} merchants with a POS`} />
-      <${Tile} label="Est. orders in the gap" value=${p1(e.ordersGapPct[c])} sub=${`${n0(e.gap[c])} merchants · ${e.vendorsGap[c]} vendors not integrated`} />
-      <${Tile} label="National chain (SKA) orders covered" value=${p1(e.skaOrdersPct[c])} sub=${`${e.brandsIntegrated[c]} of ${e.brands[c]} brands on an integrated POS`} />
-      <${Tile} label="Covered merchants with no response" value=${p1(e.noResponsePct[c])} sub=${`${n0(e.noResponse[c])} merchants waiting on the next step`} />
-    </div>
+    ${kr && html`<section class="ok-card ok-kr">
+      <div class="kr-head">
+        <div class="kr-title">
+          <h3>Est. orders with a known POS status</h3>
+          <p class="muted small">Key result: ${target}% on average across the ${kr.citiesTotal} KR cities. This sheet has ${3} of them (X, Y, F).</p>
+        </div>
+        <div class="kr-score">
+          <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}>${p1(avg3)}</span>
+          <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : 'Below target'}<//><span class="muted small">Average of X, Y, F · target ${target}%</span></span>
+        </div>
+      </div>
+      <p class=${`kr-call ${below.length ? 'is-bad' : 'is-ok'}`}><${Icon} n=${below.length ? 'alert' : 'check'} s=${15} />
+        ${below.length
+          ? below.map((i) => html`<span><b>${CITIES[i]}</b> is ${(target - O[i].knownPct).toFixed(1)} pts below target: ≈ ${n0(target * O[i].tot / 100 - O[i].known)} more est. orders/day need a known POS status. </span>`)
+          : html`<span>All 3 cities are above the ${target}% target.</span>`}
+      </p>
+      <${Legend} groups=${[{ title: 'Status known', items: [ST.good, ST.bad, ST.na] }, { title: 'Status unknown', items: [ST.wait, ST.todo] }]} />
+      <div class="kr-rows">
+        <div class="kr-scale" aria-hidden="true"><span></span><span class="kr-ticks"><i style="left:0">0%</i><i class="t" style=${`left:${target}%`}>Target ${target}%</i><i style="left:100%">100%</i></span><span></span></div>
+        ${krOrder.map((i) => { const o = O[i]; const ok = o.knownPct >= target;
+          return html`<div class=${`kr-row ${i === c ? 'on' : ''} ${i === 0 ? 'total' : ''}`}>
+            <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${n0(o.tot)} orders/day</small></span>
+            <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${orderParts(o)} total=${o.tot} split=${3} target=${target} />
+            <span class="kr-val"><b>${p1(o.knownPct)}</b><${Status} ok=${ok}>${ok ? 'On track' : `${(target - o.knownPct).toFixed(1)} pts short`}<//></span>
+          </div>`; })}
+      </div>
+    </section>`}
 
-    <div class="ok-grid">
-      <section class="ok-card">
-        <h3>Est. orders by POS status</h3>
-        <p class="muted small">Share of each city's estimated orders/day.</p>
-        <${Legend} items=${[SEGS[0], SEGS[1], REST]} />
-        ${rows.map((r) => { const ip = e.ordersIntegratedPct[r.i], gp = e.ordersGapPct[r.i];
-          return html`<${StackRow} id=${`o${r.i}`} label=${r.name === 'Total' ? 'All cities' : r.name} sub=${`${n0(e.orders[r.i])}/day`} total=${100} on=${r.i === c}
-            parts=${[{ v: ip, cls: 's1', label: SEGS[0].label, text: `${p1(ip)} · ≈ ${n0(e.orders[r.i] * ip / 100)} orders/day` },
-              { v: gp, cls: 's2', label: SEGS[1].label, text: `${p1(gp)} · ≈ ${n0(e.orders[r.i] * gp / 100)} orders/day` },
-              { v: 100 - ip - gp, cls: 'rest', label: 'Everything else', text: `${p1(100 - ip - gp)} of est. orders` }]} />`; })}
-      </section>
-
-      <section class="ok-card">
-        <h3>Where the merchant list stands</h3>
-        <p class="muted small">Every merchant in the list, by research result.</p>
-        <${Legend} items=${SEGS} />
-        ${rows.map((r) => html`<${StackRow} id=${`m${r.i}`} label=${r.name === 'Total' ? 'All cities' : r.name} sub=${`${n0(e.merchants[r.i])} merchants`} total=${e.merchants[r.i]} on=${r.i === c}
-          parts=${SEGS.map((s) => ({ v: r.cp[s.k], cls: s.cls, label: s.label }))} />`)}
-      </section>
+    <div class="ok-signals">
+      <${Signal} tone="good" icon="check" label="On an integrated POS" value=${p1(e.ordersIntegratedPct[c])} unit="of est. orders"
+        sub=${`${n0(e.integrated[c])} merchants · ${p1(e.posIntegratedPct[c])} of merchants with a POS`} />
+      <${Signal} tone="bad" icon="alert" label="In the gap (POS not integrated)" value=${p1(e.ordersGapPct[c])} unit="of est. orders"
+        sub=${`${n0(e.gap[c])} merchants · ${e.vendorsGap[c]} vendors to integrate`} />
+      <${Signal} tone="wait" icon="clock" label="No response from merchant" value=${p1(e.noResponsePct[c])} unit="of covered merchants"
+        sub=${`${n0(e.noResponse[c])} merchants waiting on the next ladder step`} />
+      <${Signal} tone="good" icon="users" label="National chains (SKA)" value=${p1(e.skaOrdersPct[c])} unit="of SKA orders integrated"
+        sub=${`${e.brandsIntegrated[c]} of ${e.brands[c]} brands integrated · ${e.brandsGap[c]} in the gap · ${e.brandsUnknown[c]} POS unknown`} />
     </div>
 
     <section class="ok-card">
-      <div class="ok-card-h"><h3>Gap list: POS vendors not integrated with Keeta</h3><div class="grow"></div>
+      <h3>Where the merchant list stands</h3>
+      <p class="muted small">Every merchant in the list, by research result. Same colors as the key result above.</p>
+      <${Legend} groups=${[{ items: [ST.good, ST.bad, ST.na, ST.wait, ST.todo] }]} />
+      ${CITIES.map((x, i) => { const m = merch(i);
+        return html`<div class=${`kr-row ${i === c ? 'on' : ''}`}>
+          <span class="ok-slabel"><b>${cityName(x)}</b><small>${n0(e.merchants[i])} merchants</small></span>
+          <${Bar} id=${`m${i}`} label=${cityName(x)} total=${e.merchants[i]} split=${3}
+            parts=${['good', 'bad', 'na', 'wait', 'todo'].map((k) => ({ v: m[k], cls: ST[k].cls, label: ST[k].label, text: `${n0(m[k])} merchants · ${p1(pct(m[k], e.merchants[i]))}` }))} />
+          <span class="kr-val"><b>${p1(pct(e.covered[i], e.merchants[i]))}</b><small class="muted">covered</small></span>
+        </div>`; })}
+    </section>
+
+    <section class="ok-card">
+      <div class="ok-card-h"><h3><span class="ok-dot v-bad"></span>Gap list: POS vendors not integrated with Keeta</h3><div class="grow"></div>
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...['willing', 'unwilling', 'self built', ''].map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
       </div>
       <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders.</p>
@@ -159,14 +207,16 @@ export function Okr() {
     <section class="ok-card">
       <h3>All numbers by city</h3>
       <div class="ok-tablewrap"><table class="ok-table ok-num">
-        <thead><tr><td></td>${CITIES.map((x, i) => html`<th scope="col" class=${`num ${i === c ? 'on' : ''}`}>${x === 'Total' ? 'All cities' : x}</th>`)}</tr></thead>
+        <thead><tr><td></td>${CITIES.map((x, i) => html`<th scope="col" class=${`num ${i === c ? 'on' : ''}`}>${cityName(x)}</th>`)}</tr></thead>
         <tbody>
+          ${kr && html`<tr class="grp"><th colspan="5">Key result</th></tr>
+          <tr><th scope="row">% of est. orders with a known POS status</th>${CITIES.map((_, i) => html`<td class=${`${i === c ? 'on' : ''} ${O[i].knownPct >= target ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(O[i].knownPct)}</td>`)}</tr>`}
           <tr class="grp"><th colspan="5">List</th></tr>
           ${T('Merchants in list', 'merchants')}${T('Estimated orders/day', 'orders')}
           <tr class="grp"><th colspan="5">Discovery</th></tr>
           ${T('Merchants covered by discovery', 'covered')}
-          <tr><th>Discovery coverage</th>${CITIES.map((_, i) => html`<td class=${i === c ? 'on' : ''}>${p1(pct(e.covered[i], e.merchants[i]))}</td>`)}</tr>
-          ${T('Merchants with a POS found', 'pos')}${T('…on an integrated POS', 'integrated')}${T('…on a non-integrated POS (gap)', 'gap')}
+          <tr><th scope="row">Discovery coverage</th>${CITIES.map((_, i) => html`<td class=${i === c ? 'on' : ''}>${p1(pct(e.covered[i], e.merchants[i]))}</td>`)}</tr>
+          ${T('Merchants with a POS found', 'pos')}${T('…on an integrated POS', 'integrated')}${T('…on a POS not integrated (gap)', 'gap')}
           ${T('Merchants on a printer (no POS)', 'printer')}${T('Excluded from gap (ordering tool / self-built)', 'excluded')}
           ${T('Merchants with no response', 'noResponse')}${T('% of covered with no response', 'noResponsePct', p1)}
           <tr class="grp"><th colspan="5">Coverage</th></tr>
@@ -174,11 +224,11 @@ export function Okr() {
           <tr class="grp"><th colspan="5">POS vendors</th></tr>
           ${T('POS vendors found', 'vendors')}${T('…integrated with Keeta', 'vendorsIntegrated')}${T('…not integrated (gap list)', 'vendorsGap')}
           <tr class="grp"><th colspan="5">National chains (SKA), by brand</th></tr>
-          ${T('Brands', 'brands')}${T('…on an integrated POS', 'brandsIntegrated')}${T('…on a non-integrated POS (gap)', 'brandsGap')}${T('…POS unknown', 'brandsUnknown')}
+          ${T('Brands', 'brands')}${T('…on an integrated POS', 'brandsIntegrated')}${T('…on a POS not integrated (gap)', 'brandsGap')}${T('…POS unknown', 'brandsUnknown')}
           ${T('SKA orders covered', 'skaOrdersPct', p1)}
         </tbody>
       </table></div>
-      <p class="muted small">"% of all est. orders" is the share of the list's total estimated orders. Covered by discovery = researched + no response + KAM. Merchants are stores; brands are distinct brand names. Vendor and brand totals are not the sum of the cities (the same name counts once). Cities X, Y and F as in the source sheet.${d.started ? ` Project started ${fmtDay(d.started)}.` : ''}</p>
+      <p class="muted small">Known POS status = researched merchants (POS found, printer, ordering tool or self-built), weighted by est. orders/day, from the Tracker tab. "% of all est. orders" is the share of the list's total estimated orders. Covered by discovery = researched + no response + KAM. Merchants are stores; brands are distinct brand names. Vendor and brand totals are not the sum of the cities (the same name counts once). Cities X, Y and F as in the source sheet.${d.started ? ` Project started ${fmtDay(d.started)}.` : ''}</p>
     </section>
   </div>`;
 }
