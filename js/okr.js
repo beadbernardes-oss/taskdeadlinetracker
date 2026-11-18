@@ -215,7 +215,7 @@ function PdvSection({ s2, d, e, u }) {
         <tbody>
           <tr><th scope="row">Total mapped PDVs</th>${cnt('mapped')}</tr>
           <tr class="row-good"><th scope="row">Integrated with Keeta</th>${cnt('integrated')}</tr>
-          <tr class="row-bad-soft"><th scope="row">Pending integration</th>${cnt('pending')}</tr>
+          <tr class="row-bad"><th scope="row">Pending integration</th>${cnt('pending')}</tr>
           <tr><th scope="row">PDVs covering 80% of pending orders</th>${cnt('top80')}</tr>
           <tr class="row-good"><th scope="row" class="sub">↳ Willing to cooperate now</th>${withPct(s2.willing)}</tr>
           <tr class="row-bad"><th scope="row" class="sub">↳ Unwilling to cooperate</th>${withPct(s2.unwilling)}</tr>
