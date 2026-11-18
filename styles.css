@@ -817,3 +817,4 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .ok-s1 tr.grp-h th:not(:last-child) { border-right: 1px solid var(--border); }
 /* Números das linhas-mãe sem negrito (o nome da linha continua em destaque) */
 .ok-mt tr.row-parent td, .ok-mt tr.row-kr td { font-weight: 400 !important; }
+.ok-mt th.ok-sub2, .ok-mt tr.row-br th.ok-sub2 { padding-left: 40px; }

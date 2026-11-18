@@ -102,12 +102,14 @@ function StoresSection({ s1, kr }) {
     return { v, cls: ST[k].cls, label: ST[k].label, text: `${p1(v)} of est. orders · ≈ ${n0(s1.orders[i] * v / 100)} orders/day` };
   });
   const rows = [
-    { k: 'noAnswer', label: 'Merchants without answer or deprioritized', parent: true },
-    ...(s1.noAnswerBreak && U().okrBreakOpen ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true })) : []),
+    { k: 'noAnswer', label: 'Merchants without answer or deprioritized', parent: true, toggle: 'okrBreakOpen', has: !!s1.noAnswerBreak },
+    ...(s1.noAnswerBreak && U().okrBreakOpen ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true, src: 'noAnswerBreak' })) : []),
     { k: 'pending', label: 'Merchants pending answer' },
     { k: 'known', label: 'Merchants with PDV known by us', kr: true },
     { k: 'integrated', label: 'Already integrated with Keeta', sub: true, tone: 'good' },
-    { k: 'gap', label: 'Pending integration', sub: true, tone: 'bad' },
+    { k: 'gap', label: 'Pending integration', sub: true, tone: 'bad', toggle: 'okrGapOpen', has: !!s1.gapBreak },
+    // Pending integration por segmento (redes nacionais x pequenos e médios), pela gap list
+    ...(s1.gapBreak && U().okrGapOpen ? [['ska', 'of which SKA'], ['smb', 'of which SMB']].map(([k, label]) => ({ k, label, sub2: true, br: true, tone: 'bad', src: 'gapBreak' })) : []),
   ];
   return html`<section class="ok-sec">
     <header class="ok-sec-h"><span class="ok-sec-n">1</span><h2>Stores and orders</h2></header>
@@ -149,13 +151,13 @@ function StoresSection({ s1, kr }) {
         <tbody>
           <tr><th scope="row">Merchant list (100%)</th>${CITIES.map((_, i) => html`<td class="num">${n0(s1.stores[i])}</td><td class="num">${n0(s1.orders[i])}</td>`)}</tr>
           ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''} ${r.br ? 'row-br' : ''} ${r.parent ? 'row-parent' : ''}`}>
-            <th scope="row" class=${r.sub ? 'ok-sub' : ''}>${r.parent && s1.noAnswerBreak
-              ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U().okrBreakOpen} title=${U().okrBreakOpen ? 'Hide breakdown' : 'Show breakdown'} onClick=${() => setUI({ okrBreakOpen: !U().okrBreakOpen })}>
-                  ${r.label}<${Icon} n="right" s=${14} cls=${U().okrBreakOpen ? 'open' : ''} /></button>`
-              : html`${r.sub ? '↳ ' : ''}${r.label}`}</th>
-            ${CITIES.map((_, i) => { const v = r.br ? s1.noAnswerBreak[r.k] : s1[r.k];
-              return html`<td class=${`num ${i === 0 && r.tone ? 'b' : ''}`}>${p1(v.s[i])}</td>
-              <td class=${`num ${i === 0 && r.tone ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
+            <th scope="row" class=${r.sub2 ? 'ok-sub2' : r.sub ? 'ok-sub' : ''}>${r.toggle && r.has
+              ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U()[r.toggle]} title=${U()[r.toggle] ? 'Hide breakdown' : 'Show breakdown'} onClick=${() => setUI({ [r.toggle]: !U()[r.toggle] })}>
+                  ${r.sub ? '↳ ' : ''}${r.label}<${Icon} n="right" s=${14} cls=${U()[r.toggle] ? 'open' : ''} /></button>`
+              : html`${r.sub2 ? '↳↳ ' : r.sub ? '↳ ' : ''}${r.label}`}</th>
+            ${CITIES.map((_, i) => { const v = r.src ? s1[r.src][r.k] : s1[r.k];
+              return html`<td class=${`num ${i === 0 && r.tone && !r.br ? 'b' : ''}`}>${p1(v.s[i])}</td>
+              <td class=${`num ${i === 0 && r.tone && !r.br ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
           </tr>`)}
         </tbody>
       </table></div>
