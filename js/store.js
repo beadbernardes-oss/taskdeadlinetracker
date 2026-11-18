@@ -33,6 +33,8 @@ let ui = {
   drawer: null, modal: null, toast: null, askSnoozeUntil: 0, askFocus: null,
   filters: { owner: 'all', prios: [], macros: [], q: '' }, showFilters: false,
   weekOffset: 0, leadOnly: true, person: null, summaryWeek: 0,
+  // OKR3: as seções 1 a 4 começam retraídas; abrir cada uma toca a animação
+  okrS1Hidden: true, okrS2Hidden: true, okrGapHidden: true, okrS4Hidden: true,
 };
 const subs = new Set();
 const emit = () => subs.forEach((f) => f());

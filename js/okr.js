@@ -58,6 +58,10 @@ addEventListener('scroll', hideTip, { capture: true, passive: true });
 addEventListener('pointerdown', (ev) => { if (!ev.target.closest?.('.ok-seg')) hideTip(); }, { capture: true });
 addEventListener('keydown', (ev) => { if (ev.key === 'Escape') hideTip(); });
 addEventListener('hashchange', hideTip);
+// Ao entrar na aba OKR3, as seções voltam a ficar retraídas
+addEventListener('hashchange', (ev) => {
+  if (/#\/okr3/.test(location.hash) && !/#\/okr3/.test(ev.oldURL || '')) setUI({ okrS1Hidden: true, okrS2Hidden: true, okrGapHidden: true, okrS4Hidden: true });
+});
 
 const segTip = (key, content) => ({
   onPointerMove: (ev) => { if (ev.pointerType === 'mouse') showTip(ev.clientX, ev.clientY, key, content); },
