@@ -911,3 +911,10 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .pdv-win { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin: 10px 0 12px; padding: 0 2px; color: var(--text); }
 .pdv-win i { flex: none; width: 14px; height: 14px; border-radius: 3px; margin-top: 2px; }
 .pdv-win b { color: var(--ok); }
+
+/* Battlecard: marcas com PDV desconhecido em tinta neutra; selo "Not secure to launch" no mesmo carimbo, em vermelho */
+.bc-tab tr.unk td { color: var(--muted); }
+.bc-seal.is-not { --seal: var(--p0-text); }
+:root[data-theme="dark"] .bc-seal.is-not { --seal: var(--p0-text); }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .bc-seal.is-not { --seal: var(--p0-text); } }
+.ok-bc-card:not(.is-secure) { animation: bc-thud .3s ease-out .9s; }

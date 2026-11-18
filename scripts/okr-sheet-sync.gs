@@ -141,8 +141,10 @@ function buildOkr() {
   const lhHead = lh.findIndex((r) => norm(r[0]) === 'city' && norm(r[1]) === 'brand' && norm(r[2]).indexOf('class') === 0);
   const z = () => [0, 0, 0, 0];
   const cls = {};
-  // Marcas por segmento e cidade (battlecard): "brand list" e "of which are integrated" (coluna J "On integrated POS?" com Yes)
+  // Marcas por segmento e cidade (battlecard). Coluna I "POS found (Tracker)", coluna J "On integrated POS?":
+  // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; senão, PDV não integrado (gap)
   const brands = { ska: z(), lh: z() }; const intBrands = { ska: z(), lh: z() };
+  const gapBrands = { ska: z(), lh: z() }; const unkBrands = { ska: z(), lh: z() };
   if (lhHead >= 0) for (let i = lhHead + 1; i < lh.length; i++) {
     const r = lh[i]; if (!(r[0] in CITY_COL)) continue;
     const key = r[0] + '|' + norm(r[1]);
@@ -151,7 +153,8 @@ function buildOkr() {
     else if (r[2] === 'SKA - Local Hero' && norm(r[7]) === 'yes') k = 'lh';
     if (!k) continue;
     cls[key] = k;
-    [0, CITY_COL[r[0]]].forEach((j) => { brands[k][j] += 1; if (/yes/.test(norm(r[9]))) intBrands[k][j] += 1; });
+    const pos = norm(r[8]); const bucket = /yes/.test(norm(r[9])) ? intBrands : (!pos || pos === 'not mapped' ? unkBrands : gapBrands);
+    [0, CITY_COL[r[0]]].forEach((j) => { brands[k][j] += 1; bucket[k][j] += 1; });
   }
   const BRK = ['noAnswer', 'printer', 'longTail', 'selfBuilt', 'orderingTool'];
   const bN = {}; const bO = {}; BRK.forEach((k) => { bN[k] = z(); bO[k] = z(); });
@@ -199,7 +202,7 @@ function buildOkr() {
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])) };
-    if (brands[k]) { seg4[k].brands = brands[k]; seg4[k].intBrands = intBrands[k]; }
+    if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], unkBrands: unkBrands[k] });
   });
 
   return {
