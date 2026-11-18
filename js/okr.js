@@ -313,7 +313,9 @@ export function Okr() {
   if (!d || !d.s1 || !d.s2) return html`<div class="view okr"><${Empty} text="No OKR3 data yet." icon="list" /></div>`;
   return html`<div class="view okr">
     <div class="toolbar">
-      <div class="ok-head"><h2>Epicenters PDV coverage</h2><span class="muted small">Data as of ${fmtDay(d.asOf)} · Summary tab</span></div>
+      <div class="ok-head"><h2>Epicenters PDV coverage</h2><span class="muted small">${d.syncedAt
+        ? `Updated from the sheet ${new Date(d.syncedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+        : `Data as of ${fmtDay(d.asOf)} · Summary tab`}</span></div>
       <div class="grow"></div>
       ${d.source && html`<a class="btn btn-sm" href=${d.source} target="_blank" rel="noopener"><${Icon} n="link" s=${14} />Summary sheet</a>`}
     </div>

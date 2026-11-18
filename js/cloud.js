@@ -87,6 +87,7 @@ async function connect(u) {
   listen();
   status('in');
   await pullFeed();
+  await pullOkr().catch(() => {});
   syncSchedule().catch(() => {});
   refreshSharing().catch(() => {});
 }
@@ -148,6 +149,16 @@ async function publishView() {
   if (!error) lastShared = j;
 }
 
+// OKR3 enviado pelo Apps Script da planilha (okr_feed): substitui os números do painel quando chega versão nova
+async function pullOkr() {
+  if (!userId || viewerOf) return;
+  const { data, error } = await db(() => sb.from('okr_feed').select('data, updated_at').eq('user_id', userId).maybeSingle());
+  if (error || !data || !data.data) return; // tabela ainda não criada ou nada enviado
+  const cur = getState().okr3 || {};
+  if (cur.syncedAt && cur.syncedAt >= data.updated_at) return;
+  mutate((st) => { st.okr3 = { ...data.data, source: data.data.source || cur.source, kr: data.data.kr || cur.kr, syncedAt: data.updated_at }; });
+}
+
 // Agenda do Daxiang enviada pelo script do computador
 async function pullFeed(row) {
   if (!userId) return;
@@ -207,6 +218,7 @@ function listen() {
       replaceState(p.new.data, { silent: true });
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_feed', filter: `user_id=eq.${userId}` }, () => { pullFeed().catch(() => {}); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'okr_feed', filter: `user_id=eq.${userId}` }, () => { pullOkr().catch(() => {}); })
     .subscribe();
 }
 
@@ -218,5 +230,6 @@ document.addEventListener('visibilitychange', async () => {
   const { data } = await db(() => sb.from('tracker_docs').select('data, version').eq('user_id', userId).single());
   if (data && data.version > version) { version = data.version; replaceState(data.data, { silent: true }); }
   await pullFeed().catch(() => {});
+  await pullOkr().catch(() => {});
   syncSchedule().catch(() => {}); // recalcula ao voltar (ex.: novo dia)
 });

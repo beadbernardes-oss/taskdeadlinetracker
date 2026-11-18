@@ -13,8 +13,9 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
   const token = req.headers.get('x-ingest-token') || '';
   if (token.length < 32) return new Response('forbidden', { status: 403 });
-  const { data: row } = await sb.from('ingest_tokens').select('user_id').eq('token_hash', await sha256(token)).maybeSingle();
-  if (!row) return new Response('forbidden', { status: 403 });
+  const { data: row } = await sb.from('ingest_tokens').select('*').eq('token_hash', await sha256(token)).maybeSingle();
+  // O token da planilha do OKR3 (escopo 'okr') não pode mexer na agenda
+  if (!row || row.scope === 'okr') return new Response('forbidden', { status: 403 });
 
   let feed: any;
   try { feed = await req.json(); } catch { return new Response('bad json', { status: 400 }); }
