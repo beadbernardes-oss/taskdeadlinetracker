@@ -283,9 +283,11 @@ function LaunchSection({ s4, u }) {
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
           <header class="bc-head">
             <h3>City ${CITIES[i]}</h3>
-            ${ok ? html`<span class="bc-stamp" title=${`Trigger reached: ${pass.map(([, l]) => l).join(', ')}`}><${Icon} n="star" s=${15} />Secure to launch</span>`
+            ${ok ? html`<span class="bc-seal" role="img" aria-label=${`Secure to launch, via ${pass.map(([, l]) => l).join(' and ')}`}>
+                <span class="bc-seal-t">Secure to launch</span>
+                <span class="bc-seal-s">via ${pass.map(([, l]) => l).join(' + ')}</span>
+              </span>`
               : html`<span class="bc-stamp not"><${Icon} n="alert" s=${14} />Not yet · no segment at ${target}%</span>`}
-            ${ok && html`<span class="bc-via muted small">via ${pass.map(([, l]) => l).join(' + ')}</span>`}
           </header>
           ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const segOk = cov >= target;
             return html`<div class="bc-seg">

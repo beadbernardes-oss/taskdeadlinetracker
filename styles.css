@@ -861,4 +861,22 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-track i:first-child { border-radius: 5px 0 0 5px; }
 .bc-track .ok-target { top: -4px; bottom: -4px; }
 @media (max-width: 1100px) { .ok-battle { grid-template-columns: 1fr; } }
-.bc-via { flex-basis: 100%; text-align: right; margin-top: -4px; }
+/* Selo "Secure to launch" como carimbo de borracha: girado, borda dupla, tinta levemente gasta */
+.ok-bc-card { position: relative; }
+.bc-head { min-height: 44px; }
+.bc-seal {
+  --seal: #237a52;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 12px 4px; margin: -4px 2px -6px 0;
+  border: 2px solid var(--seal); outline: 1px solid var(--seal); outline-offset: 2px; border-radius: 3px;
+  color: var(--seal); text-transform: uppercase; line-height: 1.1; text-align: center;
+  transform: rotate(-6deg); opacity: .9; mix-blend-mode: multiply;
+  /* textura de tinta gasta */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.2'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.2'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size: 120px 60px; mask-size: 120px 60px;
+}
+.bc-seal-t { font-size: 14px; font-weight: 800; letter-spacing: .12em; }
+.bc-seal-s { font-size: 9px; font-weight: 700; letter-spacing: .14em; }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .bc-seal { --seal: #5fd39f; mix-blend-mode: normal; opacity: .95; } }
+:root[data-theme="dark"] .bc-seal { --seal: #5fd39f; mix-blend-mode: normal; opacity: .95; }
