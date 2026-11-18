@@ -81,7 +81,7 @@ function Bar({ id, label, parts, total, split, target, labelFirst = true }) {
       onFocus=${(ev) => { const r = ev.currentTarget.getBoundingClientRect(); showTip(r.left, r.bottom - 6, `${id}|all`, all); }} onBlur=${hideTip}>
       ${shown.map((p) => html`<span class=${`ok-seg ${p.cls} ${split != null && p.i === split ? 'split' : ''}`} style=${`flex:${p.w} 1 0`}
         ...${segTip(`${id}|${p.i}`, html`<b>${label}</b><span>${p.label}</span><span class="ink">${p.text}</span>`)}>
-        ${labelFirst && p.i === 0 && p.w >= 9 ? html`<em>${p.short || `${Math.round(p.w)}%`}</em>` : ''}</span>`)}
+        ${(labelFirst && p.i === 0 && p.w >= 9) || (p.i > 0 && p.short && p.w >= 5) ? html`<em>${p.short || `${Math.round(p.w)}%`}</em>` : ''}</span>`)}
     </div>
     ${target != null && html`<span class="ok-target" style=${`left:${target}%`} aria-hidden="true"></span>`}
   </div>`;
@@ -186,20 +186,28 @@ function PdvSection({ s2, d, e, u }) {
 
     <div class="ok-card">
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
-      <p class="muted small">Distinct PDV vendors in each city. Pending PDVs are split by willingness to cooperate; the % on the right is the share of pending orders on unwilling PDVs.</p>
-      <${Legend} groups=${[{ title: 'Integrated', items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
+      <p class="muted small">Bars count distinct PDV vendors in each city. The right column shows where the pending orders are.</p>
+      <p class="kr-call is-bad"><${Icon} n="alert" s=${15} />
+        <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
+          ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.${' '}${s2.top80[0]} PDVs cover 80% of pending orders.</span>
+      </p>
+      <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
+      <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
       ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`}>
-        <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.mapped[i]} PDVs</small></span>
+        <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.mapped[i]} PDVs · ${s2.pending[i]} pending</small></span>
         <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} split=${1}
           parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))} of mapped PDVs` },
             { v: s2.willing.n[i], cls: 'v-good-hatch', label: `Pending · ${WL.willing.label.toLowerCase()}`, text: `${s2.willing.n[i]} PDVs · ${p1(s2.willing.p[i])} of pending orders` },
-            { v: s2.unwilling.n[i], cls: 'v-bad', label: `Pending · ${WL.unwilling.label.toLowerCase()}`, text: `${s2.unwilling.n[i]} PDVs · ${p1(s2.unwilling.p[i])} of pending orders` }]} />
-        <span class="kr-val pdv-val"><span><b class="ok-txt-bad">${s2.pending[i]}</b> <small class="muted">pending</small></span><small class="muted">${p1(s2.unwilling.p[i])} of pending orders unwilling</small></span>
+            { v: s2.unwilling.n[i], cls: 'v-bad', label: `Pending · ${WL.unwilling.label.toLowerCase()}`, short: `${s2.unwilling.n[i]}`, text: `${s2.unwilling.n[i]} PDVs · ${p1(s2.unwilling.p[i])} of pending orders` }]} />
+        <span class="kr-val pdv-val">
+          <span><b class="ok-txt-bad">${p1(s2.unwilling.p[i])}</b> <small class="muted">unwilling</small></span>
+          <small class="muted">${s2.willing.n[i]} willing · ${s2.unwilling.n[i]} unwilling · ${s2.top80[i]} cover 80%</small>
+        </span>
       </div>`)}
-    </div>
 
-    <div class="ok-card">
-      <div class="ok-tablewrap"><table class="ok-table ok-mt ok-pdv">
+      <button type="button" class="ok-toggle ok-table-toggle" aria-expanded=${!!u.okrPdvTable} onClick=${() => setUI({ okrPdvTable: !u.okrPdvTable })}>
+        ${u.okrPdvTable ? 'Hide table' : 'Show table'}<${Icon} n="right" s=${14} cls=${u.okrPdvTable ? 'open' : ''} /></button>
+      ${u.okrPdvTable && html`<div class="ok-tablewrap"><table class="ok-table ok-mt ok-pdv">
         <thead><tr><th scope="col">Metric</th>${CITIES.map((x) => html`<th scope="col" class="num">${x}</th>`)}</tr></thead>
         <tbody>
           <tr><th scope="row">Total mapped PDVs</th>${cnt('mapped')}</tr>
@@ -210,7 +218,7 @@ function PdvSection({ s2, d, e, u }) {
           <tr class="row-bad"><th scope="row" class="ok-sub">↳ Unwilling to cooperate</th>${withPct(s2.unwilling)}</tr>
         </tbody>
       </table></div>
-      <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>
+      <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>`}
     </div>
   </section>
 
