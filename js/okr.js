@@ -270,6 +270,9 @@ function LaunchSection({ s4, u }) {
   const passing = (i) => SEGS4.filter(([k]) => s4.seg[k].coveredPct[i] >= target);
   const ready = (i) => passing(i).length > 0;
   const secure = cities.filter(ready);
+  // Quem está mais perto do gatilho, para o cartão sem selo dizer o que falta
+  const closest = (i) => { const [k, l] = SEGS4.reduce((a, b) => (s4.seg[b[0]].coveredPct[i] > s4.seg[a[0]].coveredPct[i] ? b : a));
+    return `closest: ${l}, ${(target - s4.seg[k].coveredPct[i]).toFixed(1)} pts to go`; };
   return html`<section class="ok-sec">
     <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
       summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${target}% of orders covered`} />
@@ -284,7 +287,7 @@ function LaunchSection({ s4, u }) {
                 <span class="bc-seal-t">Secure to launch</span>
                 <span class="bc-seal-s">via ${pass.map(([, l]) => l).join(' + ')}</span>
               </span>`
-              : html`<span class="bc-stamp not"><${Icon} n="alert" s=${14} />Not yet · no segment at ${target}%</span>`}
+              : html`<span class="bc-stamp not"><${Icon} n="alert" s=${14} />Not yet · ${closest(i)}</span>`}
           </header>
           ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const segOk = cov >= target;
             return html`<div class="bc-seg">
@@ -299,9 +302,9 @@ function LaunchSection({ s4, u }) {
                 <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>
               </tbody></table>
               <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
-                <span class="bc-cov-l">Orders covered</span>
+                <span class="bc-cov-l">Orders covered${!segOk && html`<small> · ${(target - cov).toFixed(1)} pts to ${target}%</small>`}</span>
                 <span class=${`bc-cov-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(cov)}</span>
-                <span class="bc-track"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i><span class="ok-target" style=${`left:${target}%`}></span></span>
+                <span class="bc-track"><span class="bc-fill"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i></span><span class="ok-target" style=${`left:${target}%`}></span></span>
               </div>
             </div>`; })}
         </article>`; })}
