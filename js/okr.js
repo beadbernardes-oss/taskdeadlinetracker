@@ -150,9 +150,9 @@ function StoresSection({ s1, kr }) {
           <tr><th scope="row">Merchant list (100%)</th>${CITIES.map((_, i) => html`<td class="num">${n0(s1.stores[i])}</td><td class="num">${n0(s1.orders[i])}</td>`)}</tr>
           ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''} ${r.br ? 'row-br' : ''} ${r.parent ? 'row-parent' : ''}`}>
             <th scope="row" class=${r.sub ? 'sub' : ''}>${r.parent && s1.noAnswerBreak
-              ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U().okrBreakOpen} onClick=${() => setUI({ okrBreakOpen: !U().okrBreakOpen })}>
-                  <${Icon} n="right" s=${14} cls=${U().okrBreakOpen ? 'open' : ''} />${r.label}<span class="ok-toggle-hint">${U().okrBreakOpen ? 'Hide breakdown' : 'Show breakdown'}</span></button>`
-              : html`${r.sub ? '↳ ' : ''}${r.label}`}${r.kr ? html` <span class="ok-krtag">KR · ${target}% of orders</span>` : ''}</th>
+              ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U().okrBreakOpen} title=${U().okrBreakOpen ? 'Hide breakdown' : 'Show breakdown'} onClick=${() => setUI({ okrBreakOpen: !U().okrBreakOpen })}>
+                  ${r.label}<${Icon} n="right" s=${14} cls=${U().okrBreakOpen ? 'open' : ''} /></button>`
+              : html`${r.sub ? '↳ ' : ''}${r.label}`}</th>
             ${CITIES.map((_, i) => { const v = r.br ? s1.noAnswerBreak[r.k] : s1[r.k];
               return html`<td class=${`num ${i === 0 && r.tone ? 'b' : ''}`}>${p1(v.s[i])}</td>
               <td class=${`num ${i === 0 && r.tone ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
