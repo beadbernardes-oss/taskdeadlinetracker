@@ -20,8 +20,8 @@ const fmtDay = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { d
 const WILL = { willing: 'Willing', unwilling: 'Unwilling', brand: 'Depends on brand signing', unresponsive: 'Unresponsive' };
 const WILL_ORDER = ['willing', 'unwilling', 'brand', 'unresponsive'];
 const willCat = (g) => {
-  const w = (g.will || '').toLowerCase(); const st = (g.status || '').toLowerCase();
-  if (/ask keeta to integrate/.test(st) || w === 'willing') return 'willing';
+  const w = (g.will || '').toLowerCase();
+  if (w === 'willing') return 'willing';
   if (/self.?built/.test(w)) return 'brand';
   if (w === 'unwilling') return 'unwilling';
   return 'unresponsive'; // "not sure (unwilling vs willing)" ou sem resposta
@@ -103,7 +103,7 @@ function StoresSection({ s1, kr }) {
   });
   const rows = [
     { k: 'noAnswer', label: 'Merchants without answer or deprioritized', parent: true },
-    ...(s1.noAnswerBreak ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true })) : []),
+    ...(s1.noAnswerBreak && U().okrBreakOpen ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true })) : []),
     { k: 'pending', label: 'Merchants pending answer' },
     { k: 'known', label: 'Merchants with PDV known by us', kr: true },
     { k: 'integrated', label: 'Already integrated with Keeta', sub: true, tone: 'good' },
@@ -149,7 +149,10 @@ function StoresSection({ s1, kr }) {
         <tbody>
           <tr><th scope="row">Merchant list (100%)</th>${CITIES.map((_, i) => html`<td class="num">${n0(s1.stores[i])}</td><td class="num">${n0(s1.orders[i])}</td>`)}</tr>
           ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''} ${r.br ? 'row-br' : ''} ${r.parent ? 'row-parent' : ''}`}>
-            <th scope="row" class=${r.sub ? 'sub' : ''}>${r.sub ? '↳ ' : ''}${r.label}${r.kr ? html` <span class="ok-krtag">KR · ${target}% of orders</span>` : ''}</th>
+            <th scope="row" class=${r.sub ? 'sub' : ''}>${r.parent && s1.noAnswerBreak
+              ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U().okrBreakOpen} onClick=${() => setUI({ okrBreakOpen: !U().okrBreakOpen })}>
+                  <${Icon} n="right" s=${14} cls=${U().okrBreakOpen ? 'open' : ''} />${r.label}<span class="ok-toggle-hint">${U().okrBreakOpen ? 'Hide breakdown' : 'Show breakdown'}</span></button>`
+              : html`${r.sub ? '↳ ' : ''}${r.label}`}${r.kr ? html` <span class="ok-krtag">KR · ${target}% of orders</span>` : ''}</th>
             ${CITIES.map((_, i) => { const v = r.br ? s1.noAnswerBreak[r.k] : s1[r.k];
               return html`<td class=${`num ${i === 0 && r.tone ? 'b' : ''}`}>${p1(v.s[i])}</td>
               <td class=${`num ${i === 0 && r.tone ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
