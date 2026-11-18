@@ -861,3 +861,4 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-track i:first-child { border-radius: 5px 0 0 5px; }
 .bc-track .ok-target { top: -4px; bottom: -4px; }
 @media (max-width: 1100px) { .ok-battle { grid-template-columns: 1fr; } }
+.bc-via { flex-basis: 100%; text-align: right; margin-top: -4px; }
