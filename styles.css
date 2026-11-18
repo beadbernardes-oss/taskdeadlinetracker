@@ -836,7 +836,7 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .ok-lead { margin: -4px 0 12px; }
 .ok-battle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .ok-bc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.ok-bc-card.is-secure { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok) inset; }
+.ok-bc-card.is-secure { border-color: color-mix(in srgb, var(--ok) 22%, var(--border)); }
 .bc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .bc-head h3 { margin: 0; font-size: 16px; }
 .bc-stamp { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); text-transform: uppercase; letter-spacing: .03em; }
