@@ -221,8 +221,13 @@ function PdvSection({ s2, d, e, u }) {
   </section>
 
   <section class="ok-sec">
-    <header class="ok-sec-h"><span class="ok-sec-n">3</span><h2>Gap list: PDV vendors not integrated with Keeta</h2></header>
-    <div class="ok-card">
+    <header class="ok-sec-h">
+      <span class="ok-sec-n">3</span>
+      <h2><button type="button" class="ok-toggle ok-sec-toggle" aria-expanded=${!!u.okrGapList} aria-controls="ok-gaplist" onClick=${() => setUI({ okrGapList: !u.okrGapList })}>
+        Gap list: PDV vendors not integrated with Keeta<${Icon} n="right" s=${16} cls=${u.okrGapList ? 'open' : ''} /></button></h2>
+      ${!u.okrGapList && html`<span class="muted small ok-sec-sum">${d.gap.length} vendors · ${n0(e.gap[0])} merchants · ${p1(e.ordersGapPct[0])} of all est. orders</span>`}
+    </header>
+    ${u.okrGapList && html`<div class="ok-card" id="ok-gaplist">
       <div class="ok-card-h ok-filters">
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
         <div class="grow"></div>
@@ -242,7 +247,7 @@ function PdvSection({ s2, d, e, u }) {
           ${!gapRows.length && html`<tr><td colspan="7" class="muted">No vendors in this group.</td></tr>`}
         </tbody>
       </table></div>
-    </div>
+    </div>`}
   </section>`;
 }
 
