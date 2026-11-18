@@ -748,3 +748,34 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
   .ok-signals { grid-template-columns: 1fr; }
   .ok-gap tbody th { white-space: normal; min-width: 104px; max-width: 124px; } .ok-gap tr > :first-child { box-shadow: 1px 0 0 var(--border); }
 }
+
+/* OKR3: seções 1 e 2 */
+.ok-sec { margin-bottom: 26px; }
+.ok-sec-h { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; }
+.ok-sec-h h2 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+.ok-sec-n { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--text); color: var(--surface); }
+.ok-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ok-two .ok-card { margin-bottom: 14px; }
+.kr-row.compact { grid-template-columns: 96px minmax(0, 1fr) 128px; padding: 5px 6px; }
+.ok-filters { margin: 8px 0 2px; }
+.ok-note { margin: 10px 0 0; }
+.ok-note sup, .ok-mt sup { color: var(--muted); }
+.ok-mt th[scope="row"] { font-weight: 500; white-space: nowrap; }
+.ok-mt th.sub { padding-left: 22px; }
+.ok-mt .grp-h th { text-align: center; color: var(--text); font-size: 12px; border-bottom: 0; padding-bottom: 0; }
+.ok-mt td.num { text-align: right; }
+.ok-mt td.b { font-weight: 700; }
+.ok-mt tr.row-good > * { background: var(--ok-soft); }
+.ok-mt tr.row-bad > * { background: var(--danger-soft); }
+.ok-mt tr.row-bad-soft th { color: var(--p0-text); }
+.ok-mt tr.row-kr th, .ok-mt tr.row-kr td { font-weight: 600; }
+.ok-krtag { display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 650; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); vertical-align: 1px; }
+.ok-mt tr > :first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.ok-mt tr.row-good > :first-child { background: var(--ok-soft); } .ok-mt tr.row-bad > :first-child { background: var(--danger-soft); }
+@media (max-width: 1100px) { .ok-two { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .ok-mt th[scope="row"] { white-space: normal; min-width: 150px; }
+  .ok-mt tr > :first-child { box-shadow: 1px 0 0 var(--border); }
+  .kr-row.compact { grid-template-columns: 1fr auto; }
+  .ok-sec-h h2 { font-size: 17px; }
+}
