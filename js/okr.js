@@ -149,7 +149,7 @@ function StoresSection({ s1, kr }) {
         <tbody>
           <tr><th scope="row">Merchant list (100%)</th>${CITIES.map((_, i) => html`<td class="num">${n0(s1.stores[i])}</td><td class="num">${n0(s1.orders[i])}</td>`)}</tr>
           ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''} ${r.br ? 'row-br' : ''} ${r.parent ? 'row-parent' : ''}`}>
-            <th scope="row" class=${r.sub ? 'sub' : ''}>${r.parent && s1.noAnswerBreak
+            <th scope="row" class=${r.sub ? 'ok-sub' : ''}>${r.parent && s1.noAnswerBreak
               ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U().okrBreakOpen} title=${U().okrBreakOpen ? 'Hide breakdown' : 'Show breakdown'} onClick=${() => setUI({ okrBreakOpen: !U().okrBreakOpen })}>
                   ${r.label}<${Icon} n="right" s=${14} cls=${U().okrBreakOpen ? 'open' : ''} /></button>`
               : html`${r.sub ? '↳ ' : ''}${r.label}`}</th>
@@ -217,8 +217,8 @@ function PdvSection({ s2, d, e, u }) {
           <tr class="row-good"><th scope="row">Integrated with Keeta</th>${cnt('integrated')}</tr>
           <tr class="row-bad"><th scope="row">Pending integration</th>${cnt('pending')}</tr>
           <tr><th scope="row">PDVs covering 80% of pending orders</th>${cnt('top80')}</tr>
-          <tr class="row-good"><th scope="row" class="sub">↳ Willing to cooperate now</th>${withPct(s2.willing)}</tr>
-          <tr class="row-bad"><th scope="row" class="sub">↳ Unwilling to cooperate</th>${withPct(s2.unwilling)}</tr>
+          <tr class="row-good"><th scope="row" class="ok-sub">↳ Willing to cooperate now</th>${withPct(s2.willing)}</tr>
+          <tr class="row-bad"><th scope="row" class="ok-sub">↳ Unwilling to cooperate</th>${withPct(s2.unwilling)}</tr>
         </tbody>
       </table></div>
       <p class="muted small ok-note">% = share of pending orders (orders in stores on a non-integrated PDV), not share of total orders. PDV totals are not the sum of the cities (the same vendor counts once).</p>
