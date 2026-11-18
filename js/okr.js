@@ -194,7 +194,7 @@ function PdvSection({ s2, d, e, u }) {
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
       <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
       ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`}>
-        <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.mapped[i]} PDVs · ${s2.pending[i]} pending</small></span>
+        <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.pending[i]} on gap</small></span>
         <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} split=${1}
           parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))} of mapped PDVs` },
             { v: s2.willing.n[i], cls: 'v-good-hatch', label: `Pending · ${WL.willing.label.toLowerCase()}`, text: `${s2.willing.n[i]} PDVs · ${p1(s2.willing.p[i])} of pending orders` },
