@@ -16,7 +16,21 @@ const nOrd = (v) => n1.format(v);
 const p1 = (v) => `${(Math.round(v * 10) / 10).toFixed(1)}%`;
 const pct = (a, b) => (b ? (a / b) * 100 : 0);
 const fmtDay = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-const WILL = { willing: 'Willing', unwilling: 'Unwilling', 'self built': 'Self-built', '': 'No answer' };
+// Categorias da gap list, a partir da coluna Willingness e do TIMs status da Summary
+const WILL = { willing: 'Willing', unwilling: 'Unwilling', brand: 'Depends on brand signing', unresponsive: 'Unresponsive' };
+const WILL_ORDER = ['willing', 'unwilling', 'brand', 'unresponsive'];
+const willCat = (g) => {
+  const w = (g.will || '').toLowerCase(); const st = (g.status || '').toLowerCase();
+  if (/ask keeta to integrate/.test(st) || w === 'willing') return 'willing';
+  if (/self.?built/.test(w)) return 'brand';
+  if (w === 'unwilling') return 'unwilling';
+  return 'unresponsive'; // "not sure (unwilling vs willing)" ou sem resposta
+};
+// Detalhe de "without answer or deprioritized"
+const NA_BREAK = [
+  ['noAnswer', 'Merchants no answer on the cold call'], ['printer', 'Merchants with printer'], ['longTail', 'Merchants with less than 5 orders/day'],
+  ['selfBuilt', 'Merchants using self-built'], ['orderingTool', 'Merchants using ordering tool'],
+];
 
 // Situações da seção 1, sempre com a mesma cor e o mesmo nome
 const ST = {
@@ -88,7 +102,8 @@ function StoresSection({ s1, kr }) {
     return { v, cls: ST[k].cls, label: ST[k].label, text: `${p1(v)} of est. orders · ≈ ${n0(s1.orders[i] * v / 100)} orders/day` };
   });
   const rows = [
-    { k: 'noAnswer', label: 'Merchants without answer or deprioritized', note: true },
+    { k: 'noAnswer', label: 'Merchants without answer or deprioritized', parent: true },
+    ...(s1.noAnswerBreak ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true })) : []),
     { k: 'pending', label: 'Merchants pending answer' },
     { k: 'known', label: 'Merchants with PDV known by us', kr: true },
     { k: 'integrated', label: 'Already integrated with Keeta', sub: true, tone: 'good' },
@@ -133,14 +148,14 @@ function StoresSection({ s1, kr }) {
         </thead>
         <tbody>
           <tr><th scope="row">Merchant list (100%)</th>${CITIES.map((_, i) => html`<td class="num">${n0(s1.stores[i])}</td><td class="num">${n0(s1.orders[i])}</td>`)}</tr>
-          ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''}`}>
-            <th scope="row" class=${r.sub ? 'sub' : ''}>${r.sub ? '↳ ' : ''}${r.label}${r.note ? html`<sup>*</sup>` : ''}${r.kr ? html` <span class="ok-krtag">KR · ${target}% of orders</span>` : ''}</th>
-            ${CITIES.map((_, i) => html`<td class=${`num ${i === 0 && r.tone ? 'b' : ''}`}>${p1(s1[r.k].s[i])}</td>
-              <td class=${`num ${i === 0 && r.tone ? 'b' : ''} ${r.kr ? (s1[r.k].o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(s1[r.k].o[i])}</td>`)}
+          ${rows.map((r) => html`<tr class=${`${r.tone ? `row-${r.tone}` : ''} ${r.kr ? 'row-kr' : ''} ${r.br ? 'row-br' : ''} ${r.parent ? 'row-parent' : ''}`}>
+            <th scope="row" class=${r.sub ? 'sub' : ''}>${r.sub ? '↳ ' : ''}${r.label}${r.kr ? html` <span class="ok-krtag">KR · ${target}% of orders</span>` : ''}</th>
+            ${CITIES.map((_, i) => { const v = r.br ? s1.noAnswerBreak[r.k] : s1[r.k];
+              return html`<td class=${`num ${i === 0 && r.tone ? 'b' : ''}`}>${p1(v.s[i])}</td>
+              <td class=${`num ${i === 0 && r.tone ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
           </tr>`)}
         </tbody>
       </table></div>
-      <p class="muted small ok-note"><sup>*</sup> Merchants without answer or deprioritized = no answer in the cold call, printer, long tail (cut from research) and ordering tool or self-built system.</p>
     </div>
   </section>`;
 }
@@ -151,11 +166,11 @@ function PdvSection({ s2, d, e, u }) {
   const scope = c === 0 ? 'all cities' : `city ${city}`;
   const gm = (g) => (c === 0 ? g.m.reduce((a, b) => a + b, 0) : g.m[c - 1]);
   const go = (g) => (c === 0 ? g.o.reduce((a, b) => a + b, 0) : g.o[c - 1]);
-  const will = u.okrWill || 'all';
+  const will = WILL[u.okrWill] ? u.okrWill : 'all';
   const gapAll = d.gap.filter((g) => gm(g) > 0).sort((a, b) => go(b) - go(a));
-  const gapRows = gapAll.filter((g) => will === 'all' || (g.will || '') === will);
+  const gapRows = gapAll.filter((g) => will === 'all' || willCat(g) === will);
   const maxO = Math.max(1, ...gapAll.map(go));
-  const willCount = (w) => gapAll.filter((g) => (g.will || '') === w).length;
+  const willCount = (w) => gapAll.filter((g) => willCat(g) === w).length;
   const cnt = (key) => CITIES.map((_, i) => html`<td class="num">${s2[key][i]}</td>`);
   const withPct = (o) => CITIES.map((_, i) => html`<td class="num">${o.n[i]} <span class="muted">(${p1(o.p[i])})</span></td>`);
   const PDV = { integrated: { label: 'Integrated with Keeta', cls: 'v-good' }, pending: { label: 'Pending integration', cls: 'v-bad' } };
@@ -211,14 +226,14 @@ function PdvSection({ s2, d, e, u }) {
         <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
       </div>
       <div class="ok-card-h ok-filters">
-        <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...['willing', 'unwilling', 'self built', ''].map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
+        <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
       </div>
-      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, self-built and no answer count as unwilling.</p>
+      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, "depends on brand signing" and "unresponsive" count as unwilling.</p>
       <div class="ok-tablewrap"><table class="ok-table ok-gap">
         <thead><tr><th scope="col">PDV vendor</th><th scope="col">Willingness</th><th scope="col">TIMs status</th><th scope="col" class="num">Merchants</th><th scope="col" class="num">Est. orders/day</th><th scope="col" class="num">% of all orders</th><th scope="col">Segment</th></tr></thead>
         <tbody>${gapRows.map((g) => html`<tr>
           <th scope="row"><b>${g.vendor}</b>${g.other && html` <span class="ok-tag" title=${`Also mapped in project ${g.other}`}>${g.other}</span>`}</th>
-          <td><span class=${`ok-will w-${(g.will || 'none').replace(' ', '-')}`}>${WILL[g.will || '']}</span></td>
+          <td><span class=${`ok-will w-${willCat(g)}`}>${WILL[willCat(g)]}</span></td>
           <td class="ok-status">${g.status || '—'}</td>
           <td class="num">${gm(g)}</td>
           <td class="num ok-barcell"><span class="ok-ibar" aria-hidden="true" style=${`width:${pct(go(g), maxO)}%`}></span><span>${nOrd(go(g))}</span></td>
