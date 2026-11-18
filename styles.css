@@ -884,3 +884,6 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-seal-s { font-size: 9px; font-weight: 700; letter-spacing: .14em; }
 @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .bc-seal { --seal: #5fd39f; mix-blend-mode: normal; opacity: .95; } }
 :root[data-theme="dark"] .bc-seal { --seal: #5fd39f; mix-blend-mode: normal; opacity: .95; }
+/* Distill: status por cidade na KR como ícone ao lado do valor (cor + forma) */
+.kr-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 99px; }
+.kr-ico.is-ok { background: var(--ok-soft); color: var(--ok); } .kr-ico.is-bad { background: var(--danger-soft); color: var(--p0-text); }

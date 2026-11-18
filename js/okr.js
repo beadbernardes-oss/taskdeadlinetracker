@@ -129,13 +129,10 @@ function StoresSection({ s1, kr }) {
 
     <div class="ok-card ok-kr">
       <div class="kr-head">
-        <div class="kr-title">
-          <h3>Est. orders with PDV known by us</h3>
-          <p class="muted small">Key result: ${target}% of est. orders, on average across the ${kr?.citiesTotal || 5} KR cities. The sheet has 3 of them (X, Y, F).</p>
-        </div>
+        <div class="kr-title"><h3>Est. orders with PDV known by us</h3></div>
         <div class="kr-score">
           <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}>${p1(avg3)}</span>
-          <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of X, Y, F · target ${target}%</span></span>
+          <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of X, Y, F (${3} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
         </div>
       </div>
       <p class=${`kr-call ${below.length ? 'is-bad' : 'is-ok'}`}><${Icon} n=${below.length ? 'alert' : 'check'} s=${15} />
@@ -150,7 +147,7 @@ function StoresSection({ s1, kr }) {
           return html`<div class=${`kr-row ${i === 0 ? 'total' : ''}`}>
             <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${n0(s1.orders[i])} orders/day</small></span>
             <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${ordersParts(i)} total=${ordersParts(i).reduce((a, p) => a + p.v, 0)} split=${2} target=${target} />
-            <span class="kr-val"><b>${p1(knownO(i))}</b><${Status} ok=${ok}>${ok ? 'On track' : `${(target - knownO(i)).toFixed(1)} pts short`}<//></span>
+            <span class="kr-val" title=${ok ? 'On track' : `${(target - knownO(i)).toFixed(1)} pts short of ${target}%`}><b class=${ok ? 'ok-txt-good' : 'ok-txt-bad'}>${p1(knownO(i))}</b><span class=${`kr-ico ${ok ? 'is-ok' : 'is-bad'}`} aria-label=${ok ? 'on track' : `${(target - knownO(i)).toFixed(1)} points short`}><${Icon} n=${ok ? 'check' : 'alert'} s=${14} /></span></span>
           </div>`; })}
       </div>
     </div>
@@ -202,7 +199,6 @@ function PdvSection({ s2, d, e, u }) {
 
     <div class="ok-card">
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
-      <p class="muted small">Bars count distinct PDV vendors in each city. The right column shows where the pending orders are.</p>
       <p class="kr-call is-bad"><${Icon} n="alert" s=${15} />
         <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
           ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
@@ -246,7 +242,7 @@ function PdvSection({ s2, d, e, u }) {
         <div class="grow"></div>
         <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
       </div>
-      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])} of all est. orders) · ${scope}, sorted by est. orders. In the PDV table above, "depends on brand" and "unresponsive" count as unwilling.</p>
+      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])}) · ${scope}</p>
       <div class="ok-tablewrap"><table class="ok-table ok-gap">
         <thead><tr><th scope="col">PDV vendor</th><th scope="col">Willingness</th><th scope="col">TIMs status</th><th scope="col" class="num">Merchants</th><th scope="col" class="num">Est. orders/day</th><th scope="col" class="num">% of all orders</th><th scope="col">Segment</th></tr></thead>
         <tbody>${gapRows.map((g) => html`<tr>
@@ -278,7 +274,7 @@ function LaunchSection({ s4, u }) {
     <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
       summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${target}% of orders covered`} />
     ${!u.okrS4Hidden && html`<div id="ok-sec-4" class="ok-battle-wrap">
-      <p class="muted small ok-lead">A city is <b>secure to launch</b> as soon as any segment has at least ${target}% of its est. orders covered: on an integrated PDV or on a printer.</p>
+      <p class="muted small ok-lead"><b>Secure to launch:</b> any segment with ${target}%+ of its est. orders covered.</p>
       <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: `${target}% trigger`, cls: 'lg-line' }] }]} />
       <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
@@ -300,14 +296,14 @@ function LaunchSection({ s4, u }) {
                 <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>
               </tbody></table>
               <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
-                <span class="bc-cov-l">Orders covered <small>(integrated + printer)</small></span>
+                <span class="bc-cov-l">Orders covered</span>
                 <span class=${`bc-cov-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(cov)}</span>
                 <span class="bc-track"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i><span class="ok-target" style=${`left:${target}%`}></span></span>
               </div>
             </div>`; })}
         </article>`; })}
       </div>
-      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab: SKA Classic = classic brands; Local Heroes = local brand candidates that meet the size criterion (still to be validated); SMB = every other store in the list. Covered = researched stores on an integrated PDV or on a printer, weighted by est. orders/day.</p>
+      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores.</p>
     </div>`}
   </section>`;
 }
@@ -317,7 +313,7 @@ export function Okr() {
   if (!d || !d.s1 || !d.s2) return html`<div class="view okr"><${Empty} text="No OKR3 data yet." icon="list" /></div>`;
   return html`<div class="view okr">
     <div class="toolbar">
-      <div class="ok-head"><h2>Epicenters PDV coverage</h2><span class="muted small">Data as of ${fmtDay(d.asOf)} · source: Summary tab${d.started ? ` · project started ${fmtDay(d.started)}` : ''}</span></div>
+      <div class="ok-head"><h2>Epicenters PDV coverage</h2><span class="muted small">Data as of ${fmtDay(d.asOf)} · Summary tab</span></div>
       <div class="grow"></div>
       ${d.source && html`<a class="btn btn-sm" href=${d.source} target="_blank" rel="noopener"><${Icon} n="link" s=${14} />Summary sheet</a>`}
     </div>
