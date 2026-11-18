@@ -4,7 +4,7 @@ import { tick, questions, unread, setSW, followUp, isOpen, isMine, agendaCheckDu
 import { parseQuick } from './util.js';
 import { Icon, Seg, openNew } from './ui.js';
 import { startCloud, sendLink, signOut, signInPassword } from './cloud.js';
-import { Today, Week, Kanban, Meetings, People, Summary } from './views.js';
+import { Today, Week, Kanban, Meetings, People } from './views.js';
 import { Gantt } from './gantt.js';
 import { Okr } from './okr.js';
 import { ItemDrawer, OccDrawer, AskModal, PostponeModal, PautaModal, SeriesModal, IcsModal, SettingsModal, NotifPanel } from './editors.js';
@@ -17,7 +17,6 @@ const ROUTES = [
   { id: 'kanban', label: 'Kanban', icon: 'board', C: Kanban },
   { id: 'reunioes', label: 'Reuniões', icon: 'list', C: Meetings },
   { id: 'pessoas', label: 'Pessoas', icon: 'users', C: People },
-  { id: 'resumo', label: 'Resumo', icon: 'doc', C: Summary },
 ];
 const routeOf = () => { const r = location.hash.replace(/^#\/?/, '').split('/')[0]; return ROUTES.find((x) => x.id === r) || ROUTES[0]; };
 
