@@ -284,7 +284,7 @@ function PdvSection({ s2, d, e, u }) {
 // Gatilho por segmento, em % dos pedidos cobertos (PDV integrado ou printer): 70% SKA Classic e Local Heroes, 50% SMB.
 // A cidade ganha o selo "Secure to launch" assim que qualquer segmento dela passa do gatilho (cada cidade por si).
 const SEGS4 = [['ska', 'SKA Classic'], ['lh', 'Local Heroes'], ['smb', 'SMB']];
-const COV4 = { ska: 'SKA orders covered', lh: 'Local Heroes orders covered', smb: 'Orders covered' };
+const COV4 = { ska: 'SKA orders covered', lh: 'Local Heroes orders covered', smb: 'SMB orders covered' };
 const dash = (a, i) => (a ? n0(a[i]) : '—');
 const TRIG4 = { ska: 70, lh: 70, smb: 50 };
 function LaunchSection({ s4, u }) {
@@ -328,7 +328,7 @@ function LaunchSection({ s4, u }) {
                       <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
               </tbody></table>
-              <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
+              <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
                 <span class="bc-cov-l">${COV4[k]}${!segOk && html`<small> · ${(target - cov).toFixed(1)} pts to ${target}%</small>`}</span>
                 <span class=${`bc-cov-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(cov)}</span>
                 <span class="bc-track"><span class="bc-fill"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i></span><span class="ok-target" style=${`left:${target}%`}></span></span>
