@@ -141,7 +141,7 @@ function StoresSection({ s1, kr }) {
     </div>
 
     <div class="ok-card">
-      <div class="ok-tablewrap"><table class="ok-table ok-mt">
+      <div class="ok-tablewrap"><table class="ok-table ok-mt ok-s1">
         <thead>
           <tr class="grp-h"><td></td>${CITIES.map((x) => html`<th scope="colgroup" colspan="2">${x === 'Total' ? 'Total (X + Y + F)' : `City ${x}`}</th>`)}</tr>
           <tr><th scope="col">Metric</th>${CITIES.map((x) => html`<th scope="col" class="num">${x} – Stores</th><th scope="col" class="num">${x} – Orders</th>`)}</tr>

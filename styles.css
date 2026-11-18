@@ -806,3 +806,12 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .ok-toggle:hover .ic { color: var(--text); }
 .ok-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .ok-toggle .ic { transition: none; } }
+/* Tabela de lojas e pedidos: colunas com a mesma largura, centralizadas sob Total / City X / Y / F */
+.ok-s1 { table-layout: fixed; min-width: 880px; }
+.ok-s1 thead tr:last-child th:first-child, .ok-s1 tbody th[scope="row"] { width: 30%; }
+.ok-s1 td.num, .ok-s1 thead th.num { text-align: center; }
+.ok-s1 tr.grp-h th { text-align: center; }
+.ok-s1 thead tr:last-child th.num:nth-child(odd), .ok-s1 tbody td.num:nth-child(odd) { border-right: 1px solid var(--border); }
+.ok-s1 thead tr:last-child th.num:last-child, .ok-s1 tbody td.num:last-child { border-right: 0; }
+.ok-s1 tr.grp-h td { width: 30%; }
+.ok-s1 tr.grp-h th:not(:last-child) { border-right: 1px solid var(--border); }
