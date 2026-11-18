@@ -827,3 +827,7 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
   .ok-filters .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; align-self: flex-start; }
   .ok-filters .seg::-webkit-scrollbar { display: none; }
 }
+/* Seção 3 (gap list) abre e fecha pelo título */
+.ok-sec-toggle { font-size: inherit; font-weight: inherit; letter-spacing: inherit; gap: 6px; }
+.ok-sec-sum { margin-left: 4px; }
+@media (max-width: 640px) { .ok-sec-h { flex-wrap: wrap; } .ok-sec-sum { flex-basis: 100%; margin-left: 36px; } }
