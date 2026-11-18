@@ -179,36 +179,23 @@ function PdvSection({ s2, d, e, u }) {
   const cnt = (key) => CITIES.map((_, i) => html`<td class="num">${s2[key][i]}</td>`);
   const withPct = (o) => CITIES.map((_, i) => html`<td class="num">${o.n[i]} <span class="muted">(${p1(o.p[i])})</span></td>`);
   const PDV = { integrated: { label: 'Integrated with Keeta', cls: 'v-good' }, pending: { label: 'Pending integration', cls: 'v-bad' } };
-  const WL = { willing: { label: 'Willing to cooperate now', cls: 'v-good' }, unwilling: { label: 'Unwilling to cooperate', cls: 'v-bad' } };
+  const WL = { willing: { label: 'Willing to cooperate now', cls: 'v-good-hatch' }, unwilling: { label: 'Unwilling to cooperate', cls: 'v-bad' } };
 
   return html`<section class="ok-sec">
     <header class="ok-sec-h"><span class="ok-sec-n">2</span><h2>PDVs and pending orders</h2></header>
 
-    <div class="ok-two">
-      <div class="ok-card">
-        <h3>Mapped PDVs by integration status</h3>
-        <p class="muted small">Distinct PDV vendors found in each city.</p>
-        <${Legend} groups=${[{ items: [PDV.integrated, PDV.pending] }]} />
-        ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row compact ${i === 0 ? 'total' : ''}`}>
-          <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.mapped[i]} PDVs</small></span>
-          <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} labelFirst=${true}
-            parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))}` },
-              { v: s2.pending[i], cls: 'v-bad', label: PDV.pending.label, text: `${s2.pending[i]} PDVs · ${p1(pct(s2.pending[i], s2.mapped[i]))}` }]} />
-          <span class="kr-val"><b class="ok-txt-bad">${s2.pending[i]}</b><small class="muted">pending</small></span>
-        </div>`)}
-      </div>
-      <div class="ok-card">
-        <h3>Pending orders by willingness to cooperate</h3>
-        <p class="muted small">Share of pending orders (orders in stores on a non-integrated PDV).</p>
-        <${Legend} groups=${[{ items: [WL.willing, WL.unwilling] }]} />
-        ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row compact ${i === 0 ? 'total' : ''}`}>
-          <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.pending[i]} pending PDVs</small></span>
-          <${Bar} id=${`w${i}`} label=${cityName(CITIES[i])} total=${100}
-            parts=${[{ v: s2.willing.p[i], cls: 'v-good', label: WL.willing.label, text: `${s2.willing.n[i]} PDVs · ${p1(s2.willing.p[i])} of pending orders` },
-              { v: s2.unwilling.p[i], cls: 'v-bad', label: WL.unwilling.label, text: `${s2.unwilling.n[i]} PDVs · ${p1(s2.unwilling.p[i])} of pending orders` }]} />
-          <span class="kr-val"><b class="ok-txt-bad">${p1(s2.unwilling.p[i])}</b><small class="muted">unwilling</small></span>
-        </div>`)}
-      </div>
+    <div class="ok-card">
+      <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
+      <p class="muted small">Distinct PDV vendors in each city. Pending PDVs are split by willingness to cooperate; the % on the right is the share of pending orders on unwilling PDVs.</p>
+      <${Legend} groups=${[{ title: 'Integrated', items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
+      ${[1, 2, 3, 0].map((i) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`}>
+        <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.mapped[i]} PDVs</small></span>
+        <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} split=${1}
+          parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))} of mapped PDVs` },
+            { v: s2.willing.n[i], cls: 'v-good-hatch', label: `Pending · ${WL.willing.label.toLowerCase()}`, text: `${s2.willing.n[i]} PDVs · ${p1(s2.willing.p[i])} of pending orders` },
+            { v: s2.unwilling.n[i], cls: 'v-bad', label: `Pending · ${WL.unwilling.label.toLowerCase()}`, text: `${s2.unwilling.n[i]} PDVs · ${p1(s2.unwilling.p[i])} of pending orders` }]} />
+        <span class="kr-val pdv-val"><span><b class="ok-txt-bad">${s2.pending[i]}</b> <small class="muted">pending</small></span><small class="muted">${p1(s2.unwilling.p[i])} of pending orders unwilling</small></span>
+      </div>`)}
     </div>
 
     <div class="ok-card">
