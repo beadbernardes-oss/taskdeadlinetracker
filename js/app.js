@@ -6,12 +6,14 @@ import { Icon, Seg, openNew } from './ui.js';
 import { startCloud, sendLink, signOut, signInPassword } from './cloud.js';
 import { Today, Week, Kanban, Meetings, People, Summary } from './views.js';
 import { Gantt } from './gantt.js';
+import { Okr } from './okr.js';
 import { ItemDrawer, OccDrawer, AskModal, PostponeModal, PautaModal, SeriesModal, IcsModal, SettingsModal, NotifPanel } from './editors.js';
 
 const ROUTES = [
   { id: 'hoje', label: 'Hoje', icon: 'sun', C: Today },
   { id: 'semana', label: 'Semana', icon: 'calendar', C: Week },
   { id: 'gantt', label: 'Gantt Product Requirements', short: 'Gantt', icon: 'gantt', C: Gantt },
+  { id: 'okr3', label: 'OKR3 Q4', short: 'OKR3', icon: 'chart', C: Okr },
   { id: 'kanban', label: 'Kanban', icon: 'board', C: Kanban },
   { id: 'reunioes', label: 'Reuniões', icon: 'list', C: Meetings },
   { id: 'pessoas', label: 'Pessoas', icon: 'users', C: People },
