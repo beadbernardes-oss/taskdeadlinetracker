@@ -189,7 +189,7 @@ function PdvSection({ s2, d, e, u }) {
       <p class="muted small">Bars count distinct PDV vendors in each city. The right column shows where the pending orders are.</p>
       <p class="kr-call is-bad"><${Icon} n="alert" s=${15} />
         <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
-          ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.${' '}${s2.top80[0]} PDVs cover 80% of pending orders.</span>
+          ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
       </p>
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
       <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
@@ -201,7 +201,7 @@ function PdvSection({ s2, d, e, u }) {
             { v: s2.unwilling.n[i], cls: 'v-bad', label: `Pending · ${WL.unwilling.label.toLowerCase()}`, short: `${s2.unwilling.n[i]}`, text: `${s2.unwilling.n[i]} PDVs · ${p1(s2.unwilling.p[i])} of pending orders` }]} />
         <span class="kr-val pdv-val">
           <span><b class="ok-txt-bad">${p1(s2.unwilling.p[i])}</b> <small class="muted">unwilling</small></span>
-          <small class="muted">${s2.willing.n[i]} willing · ${s2.unwilling.n[i]} unwilling · ${s2.top80[i]} cover 80%</small>
+          <small class="muted">${s2.willing.n[i]} willing · ${s2.unwilling.n[i]} unwilling</small>
         </span>
       </div>`)}
 
