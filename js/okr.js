@@ -343,6 +343,7 @@ function LaunchSection({ s4, u }) {
                   ? html`<tr><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ Brands on an integrated PDV</th><td>${n0(g.intBrands[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ Brands on a PDV not integrated (gap)</th><td>${dash(g.gapBrands, i)}</td></tr>
+                      ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on a non-POS system (ordering tool, self-built)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
                       <tr class="unk"><th scope="row">↳ Brands PDV unknown (BD does not know)</th><td>${dash(g.unkBrands, i)}</td></tr>`
                   : html`<tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
                       <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>

@@ -142,9 +142,12 @@ function buildOkr() {
   const z = () => [0, 0, 0, 0];
   const cls = {};
   // Marcas por segmento e cidade (battlecard). Coluna I "POS found (Tracker)", coluna J "On integrated POS?":
-  // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; senão, PDV não integrado (gap)
+  // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; sistema que não é PDV = todos os sistemas
+  // de I estão na aba "Not a POS" (ordering tool, self-built); senão, PDV não integrado (gap)
   const brands = { ska: z(), lh: z() }; const intBrands = { ska: z(), lh: z() };
   const gapBrands = { ska: z(), lh: z() }; const unkBrands = { ska: z(), lh: z() };
+  const nonPosBrands = { ska: z(), lh: z() };
+  const allNotPos = (pos) => pos.split(',').map((x) => x.trim()).filter(Boolean).every((x) => notPosSet.has(x));
   if (lhHead >= 0) for (let i = lhHead + 1; i < lh.length; i++) {
     const r = lh[i]; if (!(r[0] in CITY_COL)) continue;
     const key = r[0] + '|' + norm(r[1]);
@@ -153,7 +156,7 @@ function buildOkr() {
     else if (r[2] === 'SKA - Local Hero' && norm(r[7]) === 'yes') k = 'lh';
     if (!k) continue;
     cls[key] = k;
-    const pos = norm(r[8]); const bucket = /yes/.test(norm(r[9])) ? intBrands : (!pos || pos === 'not mapped' ? unkBrands : gapBrands);
+    const pos = norm(r[8]); const bucket = /yes/.test(norm(r[9])) ? intBrands : (!pos || pos === 'not mapped' ? unkBrands : (allNotPos(pos) ? nonPosBrands : gapBrands));
     [0, CITY_COL[r[0]]].forEach((j) => { brands[k][j] += 1; bucket[k][j] += 1; });
   }
   const BRK = ['noAnswer', 'printer', 'longTail', 'selfBuilt', 'orderingTool'];
@@ -202,7 +205,7 @@ function buildOkr() {
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])) };
-    if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], unkBrands: unkBrands[k] });
+    if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], nonPosBrands: nonPosBrands[k], unkBrands: unkBrands[k] });
   });
 
   return {
