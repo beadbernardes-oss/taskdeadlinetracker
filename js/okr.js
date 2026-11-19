@@ -287,6 +287,27 @@ const SEGS4 = [['ska', 'SKA Classic'], ['lh', 'Local Heroes'], ['smb', 'SMB']];
 const COV4 = { ska: 'SKA orders covered', lh: 'Local Heroes orders covered', smb: 'SMB orders covered' };
 const dash = (a, i) => (a ? n0(a[i]) : '—');
 const TRIG4 = { ska: 70, lh: 70, smb: 50 };
+// Nota: o que a seção 1 (PDV known) e o battlecard (orders covered) contam de forma diferente
+const Yes = () => html`<span class="ok-txt-good ok-diff-i" aria-label="counts"><${Icon} n="check" s=${14} /></span>`;
+const No = () => html`<span class="ok-txt-bad ok-diff-i" aria-label="does not count"><${Icon} n="x" s=${14} /></span>`;
+function DiffNote() {
+  return html`<div class="ok-card ok-diff">
+    <h3>Why section 1 and this battlecard show different numbers</h3>
+    <p class="muted small">Section 1 measures discovery: do we know which PDV the store uses? This battlecard measures launch readiness: can the store already receive Keeta orders?</p>
+    <div class="ok-tablewrap"><table class="ok-table">
+      <thead><tr><th scope="col"></th><th scope="col">1 · PDV known by us</th><th scope="col">4 · Orders covered</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Integrated PDV</th><td><${Yes} /></td><td><${Yes} /></td></tr>
+        <tr><th scope="row">PDV known, not integrated (gap)</th><td><${Yes} /></td><td><${No} /> <span class="muted small">can't receive orders yet</span></td></tr>
+        <tr><th scope="row">Printer (no PDV)</th><td><${No} /> <span class="muted small">no PDV to integrate</span></td><td><${Yes} /> <span class="muted small">receives orders by printer</span></td></tr>
+        <tr><th scope="row">Base (100%)</th><td>All est. orders in the city</td><td>Est. orders of that segment in the city</td></tr>
+        <tr><th scope="row">Target</th><td>50%, average of X, Y, F</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted small ok-note">Brand counts on the cards are for reading only; the % is weighted by each store's est. orders.</p>
+  </div>`;
+}
+
 function LaunchSection({ s4, u }) {
   const T = (k) => TRIG4[k] ?? s4.target ?? 50;
   const cities = [1, 2, 3];
@@ -336,6 +357,7 @@ function LaunchSection({ s4, u }) {
             </div>`; })}
         </article>`; })}
       </div>
+      <${DiffNote} />
       <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores.</p>
     </div>`}
   </section>`;

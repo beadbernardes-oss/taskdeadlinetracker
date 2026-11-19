@@ -831,6 +831,16 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 
 /* Seção 4: battlecard de prontidão por cidade */
 .ok-lead { margin: -4px 0 12px; }
+.ok-diff { margin: 16px 0 0; }
+.ok-diff > p.small { margin: 2px 0 10px; max-width: 72ch; }
+.ok-diff .ok-table tbody th { font-weight: 600; white-space: nowrap; }
+.ok-diff .ok-table td, .ok-diff .ok-table thead th { width: 38%; }
+.ok-diff-i { display: inline-flex; vertical-align: -2px; margin-right: 2px; }
+@media (max-width: 560px) {
+  .ok-diff .ok-table { font-size: 12.5px; }
+  .ok-diff .ok-table tbody th, .ok-diff .ok-table thead th { white-space: normal; }
+  .ok-diff .ok-table th, .ok-diff .ok-table td { padding: 7px 5px; }
+}
 .ok-battle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .ok-bc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ok-bc-card.is-secure { border-color: color-mix(in srgb, var(--ok) 22%, var(--border)); }
