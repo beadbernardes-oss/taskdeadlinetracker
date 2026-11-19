@@ -28,6 +28,14 @@ function DocChip({ i, kind }) {
   return html`<button class=${`g-dc off ${kind}`} title=${tip} onClick=${(ev) => { ev.stopPropagation(); openItem(i.id); }}>${lbl}</button>`;
 }
 const fmtD = (d) => { d = new Date(d); return `${d.getDate()} ${MO[d.getMonth()]}`; };
+// Situação de cada entrega, na mesma cor na barra, no resumo e na mini-barra do grupo. Vencida passa na frente do status.
+const SIT = [['done', 'Concluídas'], ['late', 'Vencidas'], ['doing', 'Em andamento'], ['waiting', 'Aguardando'], ['todo', 'A fazer'], ['backlog', 'Backlog']];
+const sitOf = (i, now) => (i.status === 'done' ? 'done' : (i.deadline && new Date(i.deadline) < now ? 'late' : (i.status || 'todo')));
+const countSit = (list, now) => { const c = {}; list.forEach((i) => { const k = sitOf(i, now); c[k] = (c[k] || 0) + 1; }); return c; };
+function SitBar({ list, now, cls = '' }) {
+  const c = countSit(list, now);
+  return html`<span class=${`g-sitbar ${cls}`} aria-hidden="true">${SIT.filter(([k]) => c[k]).map(([k]) => html`<i class=${`sb-${k}`} style=${`flex:${c[k]} 1 0`}></i>`)}</span>`;
+}
 
 function windowFor(scale, offset, now) {
   if (scale === 'day') {
@@ -41,7 +49,7 @@ function windowFor(scale, offset, now) {
 export function Gantt() {
   const st = S(); const u = U(); const now = new Date();
   const scale = u.ganttScale || 'week'; const offset = u.ganttOffset || 0; const group = u.ganttGroup || 'owner';
-  const showDone = !!u.ganttDone; const collapsed = u.ganttCollapsed || {};
+  const showDone = u.ganttDone !== false; const collapsed = u.ganttCollapsed || {};
   const w = windowFor(scale, offset, now);
   const pct = (d) => ((+new Date(d) - +w.from) / (+w.to - +w.from)) * 100;
 
@@ -54,7 +62,8 @@ export function Gantt() {
   const soon = open.filter((i) => i.deadline && new Date(i.deadline) >= now && new Date(i.deadline) < addDays(now, 14)).sort(byDue);
 
   const groups = new Map();
-  for (const i of items.sort(byPrio)) {
+  // Pendentes primeiro (P0 > P1 > P2), concluídas no fim de cada grupo
+  for (const i of items.sort((a, b) => (a.status === 'done') - (b.status === 'done') || byPrio(a, b))) {
     const k = group === 'owner' ? ownerKey(i) : (macroName(i.macrotemaId) || 'Sem macrotema');
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(i);
@@ -81,6 +90,13 @@ export function Gantt() {
       <label class="check small"><input type="checkbox" checked=${showDone} onChange=${(e) => setUI({ ganttDone: e.target.checked })} />Concluídas</label>
       ${!u.viewer && html`<button class="btn btn-sm btn-primary" onClick=${() => newIn(group === 'owner' ? 'A definir' : 'Product Requirements')}><${Icon} n="plus" s=${15} />Entrega</button>`}
     </div>
+
+    ${all.length > 0 && (() => { const c = countSit(all, now); const nDone = c.done || 0;
+      return html`<section class="g-sum" aria-label="Situação das entregas">
+        <p class="g-sum-h"><b>${all.length - nDone}</b> pendente${all.length - nDone === 1 ? '' : 's'}<span class="g-sum-sep"></span><b class="ok">${nDone}</b> concluída${nDone === 1 ? '' : 's'}<span class="muted"> de ${all.length} entregas</span></p>
+        <${SitBar} list=${all} now=${now} cls="big" />
+        <ul class="g-sum-lg">${SIT.filter(([k]) => c[k]).map(([k, l]) => html`<li><i class=${`sb-${k}`}></i>${l}<b>${c[k]}</b></li>`)}</ul>
+      </section>`; })()}
 
     <div class="g-attn">
       <div class="g-attn-col">
@@ -122,10 +138,10 @@ export function Gantt() {
               <span class=${`g-chev ${collapsed[k] ? 'closed' : ''}`}><${Icon} n="down" s=${15} /></span>
               ${group === 'owner' && html`<${Avatar} name=${k} size=${28} />`}<b class="g-gname">${k}</b>
               <span class="muted small">${list.length} entrega${list.length > 1 ? 's' : ''}</span>
+              <span class="g-gprog" title=${`${nd} de ${done.length} concluídas`}><${SitBar} list=${done} now=${now} /><span class="muted small"><b class="ink">${nd}</b>/${done.length} concluídas</span></span>
             </div>
             <div class="g-tl g-gmeta">
               ${next && html`<span class="muted">Próximo prazo <b class="ink">${fmtD(next.deadline)}</b></span>`}
-              <span class="g-mini"><i style=${`width:${done.length ? (nd / done.length) * 100 : 0}%`}></i></span><span class="muted small">${nd}/${done.length} concluídas</span>
               ${!u.viewer && html`<button class="btn btn-icon btn-xs" aria-label=${`Nova entrega em ${k}`} onClick=${(e) => { e.stopPropagation(); newIn(k); }}><${Icon} n="plus" s=${14} /></button>`}
             </div>
           </div>
@@ -138,6 +154,7 @@ export function Gantt() {
 function GRow({ i, w, pct, now, todayIn, scale }) {
   const s = startOf(i); const e = i.deadline ? new Date(i.deadline) : null;
   const late = e && e < now && i.status !== 'done';
+  const sit = sitOf(i, now);
   const prog = i.status === 'done' ? 100 : (i.progress || 0);
   let tl;
   const ro = U().viewer;
@@ -148,9 +165,9 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
   else {
     const l = Math.max(0, pct(s < w.from ? w.from : s)); const r = Math.min(100, pct(e));
     const width = Math.max(r - l, scale === 'day' ? 1.5 : 0.8);
-    tl = html`<span class=${`g-bar pb-${i.priority} ${i.status === 'done' ? 'done' : ''} ${late ? 'late' : ''} ${s < w.from ? 'cut' : ''}`} style=${`left:${l}%;width:${width}%`} title=${`${i.title} · ${fmtD(s)} – ${fmtDateTime(e)} · ${prog}%`}>
+    tl = html`<span class=${`g-bar sb-${sit} ${s < w.from ? 'cut' : ''}`} style=${`left:${l}%;width:${width}%`} title=${`${i.title} · ${fmtD(s)} – ${fmtDateTime(e)} · ${prog}%`}>
         <i style=${`width:${prog}%`}></i></span>
-      ${e <= w.to && html`<span class=${`g-dl ${late ? 'late' : ''} pb-${i.priority}`} style=${`left:${pct(e)}%`} title=${`Prazo ${fmtDateTime(e)}`}><${Icon} n="diamond" s=${11} /></span>`}`;
+      ${e <= w.to && html`<span class=${`g-dl sb-${sit}`} style=${`left:${pct(e)}%`} title=${`Prazo ${fmtDateTime(e)}`}><${Icon} n="diamond" s=${11} /></span>`}`;
   }
   return html`<div class=${`g-row g-item ${i.status === 'done' ? 'is-done' : ''} ${i.status === 'backlog' ? 'is-backlog' : ''}`} onClick=${() => openItem(i.id)} role="button" tabindex="0" onKeyDown=${(ev) => { if (ev.key === 'Enter') openItem(i.id); }}>
     <div class="g-left">
@@ -159,7 +176,7 @@ function GRow({ i, w, pct, now, todayIn, scale }) {
           ? ticketUrl(i) && html`<a class="g-dc on tk" href=${ticketUrl(i)} target="_blank" rel="noopener" onClick=${(ev) => ev.stopPropagation()} title="Abrir ticket">TICKET</a>`
           : html`<${DocChip} i=${i} kind="mrd" /><${DocChip} i=${i} kind="prd" />`}</span></span>
         ${i.notes && html`<span class="g-sub">${i.notes.split('\n')[0]}</span>`}</span>
-      <span class="g-c-st"><span class=${`g-status st-${i.status}`}>${STATUS_LBL[i.status] || i.status}</span></span>
+      <span class="g-c-st"><span class=${`g-status st-${late ? 'late' : i.status}`}>${late ? 'Vencida' : (STATUS_LBL[i.status] || i.status)}</span></span>
       <span class=${`g-c-pr ${prog === 100 ? 'ok' : ''}`}>${prog}%</span>
       <span class="g-c-dt">${e ? `${i.start ? `${fmtD(s)} – ` : ''}${fmtD(e)}` : html`<span class="muted">TBD</span>`}</span>
     </div>
