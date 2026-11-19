@@ -586,9 +586,9 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .g-dc { font-family: inherit; font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: .03em; padding: 3px 6px; border-radius: 4px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
 .g-dc.on { background: var(--accent-soft); color: var(--accent); }
 .g-dc.on:hover { background: var(--accent); color: var(--on-accent); }
-.g-dc.off { background: none; color: var(--muted); border: 1px dashed var(--border-strong); opacity: .75; }
-.g-dc.off.mrd { color: var(--warn); border-color: var(--warn); opacity: .85; }
-.g-dc.off:hover { opacity: 1; }
+/* Sem link: MRD e PRD em cinza */
+.g-dc.off { background: var(--surface-3); color: var(--muted); border: 1px solid transparent; }
+.g-dc.off:hover { color: var(--text); border-color: var(--border-strong); }
 .g-dc.on.tk { background: var(--surface-2); color: var(--muted); }
 .g-dc.on.tk:hover { background: var(--accent); color: var(--on-accent); }
 .g-status { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; white-space: nowrap; background: var(--surface-3); color: var(--muted); }
