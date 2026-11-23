@@ -796,6 +796,8 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .ok-mt th.ok-sub2, .ok-mt tr.row-br th.ok-sub2 { padding-left: 40px; }
 /* PDVs: integrados (verde) | pendentes dispostos (verde hachurado) | pendentes não dispostos (vermelho) */
 .v-good-hatch { background: repeating-linear-gradient(135deg, var(--v-good) 0 2.5px, var(--ok-soft) 2.5px 6px); box-shadow: inset 0 0 0 1px var(--v-good); }
+.v-na { background: var(--v-na); }
+.kr-title .kr-sub { margin: 2px 0 0; max-width: 62ch; }
 .pdv-val { flex-direction: column; align-items: flex-end; gap: 0; line-height: 1.25; }
 .pdv-val b { font-size: 15px; }
 @media (max-width: 640px) { .kr-row.pdv { grid-template-columns: 1fr auto; } }

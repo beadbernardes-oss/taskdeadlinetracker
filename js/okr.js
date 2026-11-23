@@ -1,6 +1,6 @@
 // OKR3 Q4: painel (em inglês) com os números da aba Summary da planilha do piloto de PDV.
 // Os números ficam nos dados da usuária (S().okr3), não no código do site, que é público.
-// Quatro seções: 1) lojas e pedidos (com a KR de 50%); 2) PDVs e pedidos pendentes; 3) gap list; 4) prontidão para lançamento.
+// Quatro seções: 1) lojas e pedidos (KR: 70% dos pedidos com discovery feito); 2) PDVs e pedidos pendentes; 3) gap list; 4) prontidão para lançamento.
 // Cores semânticas: verde = integrado/bom, vermelho = pendente de integração/problema,
 // âmbar hachurado = aguardando resposta, contorno vazio = sem resposta ou despriorizado.
 import { html, render, useState, useEffect } from './lib.js';
@@ -26,19 +26,31 @@ const willCat = (g) => {
   if (w === 'unwilling') return 'unwilling';
   return 'unresponsive'; // "not sure (unwilling vs willing)" ou sem resposta
 };
-// Detalhe de "without answer or deprioritized"
-const NA_BREAK = [
-  ['noAnswer', 'Merchants no answer on the cold call'], ['printer', 'Merchants with printer'], ['longTail', 'Merchants with less than 5 orders/day'],
-  ['selfBuilt', 'Merchants using self-built'], ['orderingTool', 'Merchants using ordering tool'],
-];
-
+// KR da seção 1: % dos pedidos estimados com discovery feito, ou seja, sabemos como a loja aceitaria
+// pedidos (PDV integrado ou não, printer, ordering tool ou self-built). Meta definida pela usuária em 23/11/2026.
+const KR1_TARGET = 70;
 // Situações da seção 1, sempre com a mesma cor e o mesmo nome
 const ST = {
   integrated: { label: 'Already integrated with Keeta', cls: 'v-good' },
-  gap: { label: 'Pending integration', cls: 'v-bad' },
+  gap: { label: 'PDV not integrated (gap)', cls: 'v-bad' },
+  printer: { label: 'Printer', cls: 'v-good-hatch' },
+  nonPos: { label: 'Ordering tool or self-built', cls: 'v-na' },
   pending: { label: 'Pending answer', cls: 'v-wait' },
-  noAnswer: { label: 'Without answer or deprioritized', cls: 'v-empty' },
+  noAnswer: { label: 'No answer or long tail', cls: 'v-empty' },
 };
+const Z4 = { s: [0, 0, 0, 0], o: [0, 0, 0, 0] };
+const addSO = (...xs) => ({ s: [0, 1, 2, 3].map((i) => xs.reduce((a, x) => a + x.s[i], 0)), o: [0, 1, 2, 3].map((i) => xs.reduce((a, x) => a + x.o[i], 0)) });
+// Grupos da seção 1: integrada, gap e pendente vêm da Summary; printer, ordering tool, self-built, sem resposta e long tail, do Tracker
+function discovery(s1) {
+  const nb = s1.noAnswerBreak;
+  const d = nb
+    ? { integrated: s1.integrated, gap: s1.gap, printer: nb.printer || Z4, nonPos: addSO(nb.selfBuilt || Z4, nb.orderingTool || Z4), noAnswerOnly: nb.noAnswer || Z4, longTail: nb.longTail || Z4, pending: s1.pending }
+    : { integrated: s1.integrated, gap: s1.gap, printer: Z4, nonPos: Z4, noAnswerOnly: s1.noAnswer, longTail: Z4, pending: s1.pending };
+  d.noAnswer = addSO(d.noAnswerOnly, d.longTail);
+  d.disc = addSO(d.integrated, d.gap, d.printer, d.nonPos);
+  d.notDisc = addSO(d.noAnswer, d.pending);
+  return d;
+}
 
 // Dica flutuante: um único elemento fora do painel, atualizado direto
 let tipEl = null; let tipKey = null;
@@ -122,32 +134,36 @@ function SecHead({ n, title, hideKey, summary }) {
 
 // ---------- Seção 1: lojas e pedidos ----------
 function StoresSection({ s1, kr }) {
-  const target = kr?.target ?? 50;
-  const knownO = (i) => s1.known.o[i];
-  const avg3 = (knownO(1) + knownO(2) + knownO(3)) / 3;
-  const below = [1, 2, 3].filter((i) => knownO(i) < target);
-  const ordersParts = (i) => ['integrated', 'gap', 'pending', 'noAnswer'].map((k) => {
-    const v = s1[k].o[i];
+  const target = KR1_TARGET;
+  const D = discovery(s1);
+  const discO = (i) => D.disc.o[i];
+  const avg3 = (discO(1) + discO(2) + discO(3)) / 3;
+  const below = [1, 2, 3].filter((i) => discO(i) < target);
+  const ordersParts = (i) => ['integrated', 'gap', 'printer', 'nonPos', 'pending', 'noAnswer'].map((k) => {
+    const v = D[k].o[i];
     return { v, cls: ST[k].cls, label: ST[k].label, text: `${p1(v)} of est. orders · ≈ ${n0(s1.orders[i] * v / 100)} orders/day` };
   });
   const rows = [
-    { k: 'noAnswer', label: 'Merchants without answer or deprioritized', parent: true, toggle: 'okrBreakOpen', has: !!s1.noAnswerBreak },
-    ...(s1.noAnswerBreak && U().okrBreakOpen ? NA_BREAK.filter(([k]) => s1.noAnswerBreak[k]).map(([k, label]) => ({ k, label, sub: true, br: true, src: 'noAnswerBreak' })) : []),
-    { k: 'pending', label: 'Merchants pending answer' },
-    { k: 'known', label: 'Merchants with PDV known by us', kr: true },
+    { k: 'disc', label: 'Merchants discovered', kr: true, parent: true },
     { k: 'integrated', label: 'Already integrated with Keeta', sub: true, tone: 'good' },
-    { k: 'gap', label: 'Pending integration', sub: true, tone: 'bad', toggle: 'okrGapOpen', has: !!s1.gapBreak },
-    // Pending integration por segmento (redes nacionais x pequenos e médios), pela gap list
+    { k: 'gap', label: 'PDV not integrated (gap)', sub: true, tone: 'bad', toggle: 'okrGapOpen', has: !!s1.gapBreak },
+    // Gap por segmento (redes nacionais x pequenos e médios), pela gap list
     ...(s1.gapBreak && U().okrGapOpen ? [['ska', 'of which SKA'], ['smb', 'of which SMB']].map(([k, label]) => ({ k, label, sub2: true, br: true, tone: 'bad', src: 'gapBreak' })) : []),
+    { k: 'printer', label: 'Printer', sub: true },
+    { k: 'nonPos', label: 'Ordering tool or self-built (not a POS)', sub: true },
+    { k: 'notDisc', label: 'Merchants not discovered', parent: true },
+    { k: 'noAnswerOnly', label: 'No answer on the cold call', sub: true },
+    { k: 'longTail', label: 'Long tail (less than 5 orders/day)', sub: true },
+    { k: 'pending', label: 'Pending answer', sub: true },
   ];
   return html`<section class="ok-sec">
     <${SecHead} n="1" title="Stores and orders" hideKey="okrS1Hidden"
-      summary=${`PDV known: ${p1(avg3)} of est. orders (average of X, Y, F) · target ${target}%`} />
+      summary=${`Discovered: ${p1(avg3)} of est. orders (average of X, Y, F) · target ${target}%`} />
     ${!U().okrS1Hidden && html`<div id="ok-sec-1">
 
     <div class="ok-card ok-kr">
       <div class="kr-head">
-        <div class="kr-title"><h3>Est. orders with PDV known by us</h3></div>
+        <div class="kr-title"><h3>Est. orders covered by discovery</h3><p class="muted small kr-sub">We know how the store would accept Keeta orders: integrated PDV, PDV not integrated, printer, ordering tool or self-built.</p></div>
         <div class="kr-score">
           <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}><${CountUp} v=${avg3} fmt=${p1} /></span>
           <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of X, Y, F (${3} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
@@ -155,17 +171,17 @@ function StoresSection({ s1, kr }) {
       </div>
       <p class=${`kr-call ${below.length ? 'is-bad' : 'is-ok'}`}><${Icon} n=${below.length ? 'alert' : 'check'} s=${15} />
         <span>${below.length
-          ? html`To reach ${target}%, more est. orders/day need a known PDV: ${below.map((i, j) => html`${j ? ' · ' : ''}<b>${CITIES[i]}</b> ≈ ${n0((target - knownO(i)) * s1.orders[i] / 100)}`)}`
+          ? html`To reach ${target}%, more est. orders/day need discovery: ${below.map((i, j) => html`${j ? ' · ' : ''}<b>${CITIES[i]}</b> ≈ ${n0((target - discO(i)) * s1.orders[i] / 100)}`)}`
           : `All 3 cities are at or above the ${target}% target.`}</span>
       </p>
-      <${Legend} groups=${[{ title: 'PDV known', items: [ST.integrated, ST.gap] }, { title: 'PDV not known', items: [ST.pending, ST.noAnswer] }]} />
+      <${Legend} groups=${[{ title: 'Discovered', items: [ST.integrated, ST.gap, ST.printer, ST.nonPos] }, { title: 'Not discovered', items: [ST.pending, ST.noAnswer] }]} />
       <div class="kr-rows">
         <div class="kr-scale" aria-hidden="true"><span></span><span class="kr-ticks"><i style="left:0">0%</i><i class="t" style=${`left:${target}%`}>Target ${target}%</i><i style="left:100%">100%</i></span><span></span></div>
-        ${[1, 2, 3, 0].map((i, j) => { const ok = knownO(i) >= target;
+        ${[1, 2, 3, 0].map((i, j) => { const ok = discO(i) >= target;
           return html`<div class=${`kr-row ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
             <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${n0(s1.orders[i])} orders/day</small></span>
-            <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${ordersParts(i)} total=${ordersParts(i).reduce((a, p) => a + p.v, 0)} split=${2} target=${target} />
-            <span class="kr-val" title=${ok ? 'On track' : `${(target - knownO(i)).toFixed(1)} pts short of ${target}%`}><b class=${ok ? 'ok-txt-good' : 'ok-txt-bad'}>${p1(knownO(i))}</b><span class=${`kr-ico ${ok ? 'is-ok' : 'is-bad'}`} aria-label=${ok ? 'on track' : `${(target - knownO(i)).toFixed(1)} points short`}><${Icon} n=${ok ? 'check' : 'alert'} s=${14} /></span></span>
+            <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${ordersParts(i)} total=${ordersParts(i).reduce((a, p) => a + p.v, 0)} split=${4} target=${target} />
+            <span class="kr-val" title=${ok ? 'On track' : `${(target - discO(i)).toFixed(1)} pts short of ${target}%`}><b class=${ok ? 'ok-txt-good' : 'ok-txt-bad'}>${p1(discO(i))}</b><span class=${`kr-ico ${ok ? 'is-ok' : 'is-bad'}`} aria-label=${ok ? 'on track' : `${(target - discO(i)).toFixed(1)} points short`}><${Icon} n=${ok ? 'check' : 'alert'} s=${14} /></span></span>
           </div>`; })}
       </div>
     </div>
@@ -183,7 +199,7 @@ function StoresSection({ s1, kr }) {
               ? html`<button type="button" class="ok-toggle" aria-expanded=${!!U()[r.toggle]} title=${U()[r.toggle] ? 'Hide breakdown' : 'Show breakdown'} onClick=${() => setUI({ [r.toggle]: !U()[r.toggle] })}>
                   ${r.sub ? '↳ ' : ''}${r.label}<${Icon} n="right" s=${14} cls=${U()[r.toggle] ? 'open' : ''} /></button>`
               : html`${r.sub2 ? '↳↳ ' : r.sub ? '↳ ' : ''}${r.label}`}</th>
-            ${CITIES.map((_, i) => { const v = r.src ? s1[r.src][r.k] : s1[r.k];
+            ${CITIES.map((_, i) => { const v = r.src ? s1[r.src][r.k] : D[r.k];
               return html`<td class=${`num ${i === 0 && r.tone && !r.br ? 'b' : ''}`}>${p1(v.s[i])}</td>
               <td class=${`num ${i === 0 && r.tone && !r.br ? 'b' : ''} ${r.kr ? (v.o[i] >= target ? 'ok-txt-good' : 'ok-txt-bad') : ''}`}>${p1(v.o[i])}</td>`; })}
           </tr>`)}
@@ -287,21 +303,22 @@ const SEGS4 = [['ska', 'SKA Classic'], ['lh', 'Local Heroes'], ['smb', 'SMB']];
 const COV4 = { ska: 'SKA orders covered', lh: 'Local Heroes orders covered', smb: 'SMB orders covered' };
 const dash = (a, i) => (a ? n0(a[i]) : '—');
 const TRIG4 = { ska: 70, lh: 70, smb: 50 };
-// Nota: o que a seção 1 (PDV known) e o battlecard (orders covered) contam de forma diferente
+// Nota: o que a seção 1 (discovery) e o battlecard (orders covered) contam de forma diferente
 const Yes = () => html`<span class="ok-txt-good ok-diff-i" aria-label="counts"><${Icon} n="check" s=${14} /></span>`;
 const No = () => html`<span class="ok-txt-bad ok-diff-i" aria-label="does not count"><${Icon} n="x" s=${14} /></span>`;
 function DiffNote() {
   return html`<div class="ok-card ok-diff">
     <h3>Why section 1 and this battlecard show different numbers</h3>
-    <p class="muted small">Section 1 measures discovery: do we know which PDV the store uses? This battlecard measures launch readiness: can the store already receive Keeta orders?</p>
+    <p class="muted small">Section 1 measures discovery: do we know how the store would accept Keeta orders? This battlecard measures launch readiness: can the store already receive Keeta orders?</p>
     <div class="ok-tablewrap"><table class="ok-table">
-      <thead><tr><th scope="col"></th><th scope="col">1 · PDV known by us</th><th scope="col">4 · Orders covered</th></tr></thead>
+      <thead><tr><th scope="col"></th><th scope="col">1 · Discovered</th><th scope="col">4 · Orders covered</th></tr></thead>
       <tbody>
         <tr><th scope="row">Integrated PDV</th><td><${Yes} /></td><td><${Yes} /></td></tr>
         <tr><th scope="row">PDV known, not integrated (gap)</th><td><${Yes} /></td><td><${No} /> <span class="muted small">can't receive orders yet</span></td></tr>
-        <tr><th scope="row">Printer (no PDV)</th><td><${No} /> <span class="muted small">no PDV to integrate</span></td><td><${Yes} /> <span class="muted small">receives orders by printer</span></td></tr>
+        <tr><th scope="row">Printer (no PDV)</th><td><${Yes} /></td><td><${Yes} /> <span class="muted small">receives orders by printer</span></td></tr>
+        <tr><th scope="row">Ordering tool or self-built</th><td><${Yes} /></td><td><${No} /> <span class="muted small">no PDV to integrate</span></td></tr>
         <tr><th scope="row">Base (100%)</th><td>All est. orders in the city</td><td>Est. orders of that segment in the city</td></tr>
-        <tr><th scope="row">Target</th><td>50%, average of X, Y, F</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
+        <tr><th scope="row">Target</th><td>${KR1_TARGET}%, average of X, Y, F</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
       </tbody>
     </table></div>
     <p class="muted small ok-note">Brand counts on the cards are for reading only; the % is weighted by each store's est. orders.</p>

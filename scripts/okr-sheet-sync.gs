@@ -218,7 +218,7 @@ function buildOkr() {
     asOf: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd'),
     sentAt: new Date().toISOString(),
     source: ss.getUrl() + '#gid=' + sheet('Summary').getSheetId(),
-    kr: { target: 50, citiesTotal: 5 },
+    kr: { target: 70, citiesTotal: 5 },
     exec, gap, s1, s2,
     s4: { target: 50, seg: seg4 },
   };
