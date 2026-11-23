@@ -340,7 +340,8 @@ function LaunchSection({ s4, u }) {
               <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
                 ${g.brands
-                  ? html`<tr><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
+                  ? html`<tr class="hd"><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
+                      <tr class="hd"><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ Brands on an integrated PDV</th><td>${n0(g.intBrands[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ Brands on a PDV not integrated (gap)</th><td>${dash(g.gapBrands, i)}</td></tr>
                       ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on a non-POS system (ordering tool, self-built)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
@@ -349,6 +350,9 @@ function LaunchSection({ s4, u }) {
                       <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
+                ${g.pdvs && html`<tr class="hd"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
+                  <tr class="good"><th scope="row">↳ Integrated with Keeta</th><td>${n0(g.pdvInt[i])}</td></tr>
+                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>`}
               </tbody></table>
               <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
                 <span class="bc-cov-l">${COV4[k]}${!segOk && html`<small> · ${(target - cov).toFixed(1)} pts to ${target}%</small>`}</span>
@@ -359,7 +363,7 @@ function LaunchSection({ s4, u }) {
         </article>`; })}
       </div>
       <${DiffNote} />
-      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores.</p>
+      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores. PDVs = distinct POS vendors found for the segment's merchants, without the systems on the "Not a POS" tab; a vendor used by more than one segment counts in each.</p>
     </div>`}
   </section>`;
 }
