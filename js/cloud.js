@@ -18,6 +18,7 @@ let timer = null;
 let pushing = false;
 let dirty = false;
 let viewerOf = null;   // quando a pessoa logada só vê a vitrine de outra (head): id da dona
+let viewScope = 'all'; // 'all' = Gantt e OKR3 · 'okr3' = só o OKR3 (lido direto do okr_feed da dona)
 let shareOn = false;   // a dona convidou alguém: o app mantém a vitrine atualizada
 let lastShared = '';
 
@@ -41,7 +42,7 @@ export async function startCloud() {
   const { data: { session } } = await sb.auth.getSession();
   sb.auth.onAuthStateChange((ev, s) => {
     if (ev === 'SIGNED_IN' && s && s.user.id !== userId) connect(s.user);
-    if (ev === 'SIGNED_OUT') { userId = null; user = null; viewerOf = null; setUI({ viewer: false }); status('out'); }
+    if (ev === 'SIGNED_OUT') { userId = null; user = null; viewerOf = null; viewScope = 'all'; setUI({ viewer: false, viewScope: null }); status('out'); }
   });
   if (session) await connect(session.user);
   else status('out');
@@ -68,9 +69,9 @@ async function connect(u) {
   user = u; userId = u.id;
   status('syncing', { email: user.email });
   // Convidada (ex.: head)? Então só lê a vitrine de quem a convidou: nunca cria nem lê tracker_docs.
-  const { data: inv } = await db(() => sb.from('shared_access').select('owner_id'));
+  const { data: inv } = await db(() => sb.from('shared_access').select('*'));
   const invite = (inv || []).find((r) => r.owner_id !== userId);
-  if (invite) { await connectViewer(invite.owner_id); return; }
+  if (invite) { await connectViewer(invite.owner_id, invite.scope || 'all'); return; }
   const { data, error } = await db(() => sb.from('tracker_docs').select('data, version').eq('user_id', userId).maybeSingle());
   if (error) { status('error', { cloudError: error.message }); retryConnect(u); return; }
   retryN = 0;
@@ -93,18 +94,30 @@ async function connect(u) {
 }
 
 // ---------- Vitrine (Gantt + OKR3) para a head ----------
-async function connectViewer(ownerId) {
-  viewerOf = ownerId;
+async function connectViewer(ownerId, scope = 'all') {
+  viewerOf = ownerId; viewScope = scope;
   setPersistHook(null); // nada do que acontece aqui volta para o Supabase
-  setUI({ viewer: true });
-  if (!/^#\/(gantt|okr3)/.test(location.hash)) location.hash = '#/gantt';
+  setUI({ viewer: true, viewScope: scope });
+  const okrOnly = scope === 'okr3';
+  if (okrOnly ? !/^#\/okr3/.test(location.hash) : !/^#\/(gantt|okr3)/.test(location.hash)) location.hash = okrOnly ? '#/okr3' : '#/gantt';
   await pullView();
   if (channel) sb.removeChannel(channel);
-  channel = sb.channel('vitrine')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_views', filter: `owner_id=eq.${ownerId}` }, (p) => { if (p.new?.data) showView(p.new); })
-    .subscribe();
+  channel = okrOnly
+    ? sb.channel('vitrine-okr')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'okr_feed', filter: `user_id=eq.${ownerId}` }, (p) => { if (p.new?.data) showOkr(p.new); })
+      .subscribe()
+    : sb.channel('vitrine')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_views', filter: `owner_id=eq.${ownerId}` }, (p) => { if (p.new?.data) showView(p.new); })
+      .subscribe();
 }
 async function pullView() {
+  if (viewScope === 'okr3') {
+    // Só OKR3: lê o que a planilha enviou para a dona; o banco não libera o Gantt para esse acesso
+    const { data, error } = await db(() => sb.from('okr_feed').select('data, updated_at').eq('user_id', viewerOf).maybeSingle());
+    if (error) { status('error', { cloudError: error.message }); return; }
+    showOkr(data || {});
+    return;
+  }
   const { data, error } = await db(() => sb.from('shared_views').select('data, updated_at').eq('owner_id', viewerOf).maybeSingle());
   if (error) { status('error', { cloudError: error.message }); return; }
   showView(data || { data: {} });
@@ -115,20 +128,27 @@ function showView(row) {
   status('in');
 }
 
+function showOkr(row) {
+  replaceState(viewState({ okr3: row.data ? { ...row.data, syncedAt: row.updated_at } : null }), { silent: true });
+  setUI({ viewUpdatedAt: row.updated_at || null });
+  status('in');
+}
+
 // Dona: lista, convida e remove quem vê a vitrine
 export async function listViewers() {
-  const { data, error } = await db(() => sb.from('shared_access').select('viewer_email, created_at').eq('owner_id', userId).order('created_at'));
+  const { data, error } = await db(() => sb.from('shared_access').select('*').eq('owner_id', userId).order('created_at'));
   if (error) throw error;
   return data || [];
 }
-export async function addViewer(email) {
+export async function addViewer(email, scope = 'all') {
   const e = (email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new Error('E-mail inválido.');
   if (e === (user?.email || '').toLowerCase()) throw new Error('Esse é o seu próprio e-mail.');
-  const { error } = await db(() => sb.from('shared_access').insert({ owner_id: userId, viewer_email: e }));
-  if (error && error.code !== '23505') throw error;
-  shareOn = true; lastShared = '';
-  await publishView();
+  const row = { owner_id: userId, viewer_email: e, ...(scope === 'okr3' ? { scope } : {}) };
+  const { error } = await db(() => sb.from('shared_access').insert(row));
+  if (error && error.code === '23505') throw new Error('Essa pessoa já tem acesso. Remova e convide de novo para mudar o tipo.');
+  if (error) throw (/scope/i.test(error.message) ? new Error('Falta rodar o SQL supabase/schema-6-acesso-okr.sql no Supabase.') : error);
+  if (scope !== 'okr3') { shareOn = true; lastShared = ''; await publishView(); }
 }
 export async function removeViewer(email) {
   const { error } = await db(() => sb.from('shared_access').delete().eq('owner_id', userId).eq('viewer_email', email));
@@ -137,8 +157,9 @@ export async function removeViewer(email) {
 }
 async function refreshSharing() {
   if (!userId || viewerOf) return;
-  const { data, error } = await db(() => sb.from('shared_access').select('viewer_email').eq('owner_id', userId));
-  shareOn = !error && !!(data && data.length);
+  // A vitrine do Gantt só é publicada se alguém tem acesso completo; quem tem "Só OKR3" lê o okr_feed
+  const { data, error } = await db(() => sb.from('shared_access').select('*').eq('owner_id', userId));
+  shareOn = !error && !!(data && data.some((r) => (r.scope || 'all') === 'all'));
   if (shareOn) await publishView();
 }
 async function publishView() {

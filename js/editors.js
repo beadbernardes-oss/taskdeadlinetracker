@@ -562,21 +562,24 @@ function PushBox() {
   </div>`;
 }
 
-// Compartilhar só o Gantt e o OKR3 (somente leitura) com outra pessoa, pelo e-mail dela
+// Compartilhar o Gantt e o OKR3, ou só o OKR3 (somente leitura), com outra pessoa, pelo e-mail dela
+const SCOPES = [{ value: 'all', label: 'Gantt e OKR3' }, { value: 'okr3', label: 'Só OKR3' }];
 function ShareBox() {
-  const [list, setList] = useState(null); const [email, setEmail] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const [list, setList] = useState(null); const [email, setEmail] = useState(''); const [scope, setScope] = useState('all'); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
   const reload = () => listViewers().then((l) => { setList(l); setErr(''); }).catch((e) => setErr(/shared_access|relation|schema cache/i.test(e.message) ? 'Falta rodar o SQL supabase/schema-4-compartilhar.sql no Supabase.' : e.message));
   useEffect(() => { reload(); }, []);
   const add = async (e) => {
     e.preventDefault(); setBusy(true);
-    try { await addViewer(email); setEmail(''); await reload(); toast('Acesso liberado ao Gantt e ao OKR3.'); } catch (x) { setErr(x.message); }
+    try { await addViewer(email, scope); setEmail(''); await reload(); toast(scope === 'okr3' ? 'Acesso liberado só ao OKR3.' : 'Acesso liberado ao Gantt e ao OKR3.'); } catch (x) { setErr(x.message); }
     setBusy(false);
   };
   return html`<div class="set-sec">
     <h4>Compartilhar Gantt e OKR3</h4>
-    <p class="muted small">A pessoa entra com o e-mail dela e vê só as abas Gantt Product Requirements e OKR3 Q4, sem poder editar. Suas outras tarefas, reuniões e pautas não aparecem.</p>
+    <p class="muted small">A pessoa entra com o e-mail dela e vê só as abas que você liberar (Gantt Product Requirements e OKR3 Q4, ou só o OKR3), sem poder editar. Suas outras tarefas, reuniões e pautas não aparecem.</p>
     ${list && list.length > 0 && html`<ul class="share-list">${list.map((v) => html`<li><${Icon} n="user" s=${14} /><span>${v.viewer_email}</span>
+      <small class="muted">${v.scope === 'okr3' ? 'Só OKR3' : 'Gantt e OKR3'}</small>
       <button class="btn btn-ghost btn-xs" onClick=${async () => { if (!confirm(`Tirar o acesso de ${v.viewer_email}?`)) return; try { await removeViewer(v.viewer_email); await reload(); toast('Acesso removido.'); } catch (x) { setErr(x.message); } }}>Remover</button></li>`)}</ul>`}
+    <div class="share-scope" role="group" aria-label="Tipo de acesso"><${Seg} small value=${scope} onChange=${setScope} options=${SCOPES} /></div>
     <form class="row" onSubmit=${add}>
       <input type="email" placeholder="E-mail da pessoa" value=${email} onInput=${(e) => setEmail(e.target.value)} required />
       <button class="btn btn-sm btn-primary" disabled=${busy}>${busy ? 'Aguarde…' : 'Dar acesso'}</button>

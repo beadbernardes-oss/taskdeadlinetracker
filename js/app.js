@@ -20,7 +20,9 @@ const ROUTES = [
 ];
 // Quem só vê a vitrine (head) enxerga apenas o Gantt e o OKR3
 const VIEW_ROUTES = ROUTES.filter((r) => r.id === 'gantt' || r.id === 'okr3');
-const routesFor = () => (U().viewer ? VIEW_ROUTES : ROUTES);
+// Acesso "Só OKR3" (ex.: chefe da head): só a aba do OKR3
+const OKR_ROUTES = ROUTES.filter((r) => r.id === 'okr3');
+const routesFor = () => (U().viewer ? (U().viewScope === 'okr3' ? OKR_ROUTES : VIEW_ROUTES) : ROUTES);
 const routeOf = () => { const list = routesFor(); const r = location.hash.replace(/^#\/?/, '').split('/')[0]; return list.find((x) => x.id === r) || list[0]; };
 
 function Filters() {
@@ -104,10 +106,11 @@ function SyncDot() {
 function ViewerApp() {
   const u = U(); const route = routeOf(); const View = route.C; const d = u.drawer;
   if (u.cloud === 'out' || u.cloud === 'loading' || (u.cloud === 'error' && !u.email)) return html`<${Login} />`;
-  return html`<div class="app viewer">
+  const routes = routesFor(); const okrOnly = routes.length === 1;
+  return html`<div class=${`app viewer ${okrOnly ? 'viewer-one' : ''}`}>
     <aside class="side">
-      <div class="brand"><span class="logo"><${Icon} n="check" s=${16} /></span><div><b>Tracker</b><span>Gantt e OKR3 · somente leitura</span></div></div>
-      <nav class="nav">${VIEW_ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} /><span>${r.label}</span></a>`)}</nav>
+      <div class="brand"><span class="logo"><${Icon} n="check" s=${16} /></span><div><b>Tracker</b><span>${okrOnly ? 'OKR3' : 'Gantt e OKR3'} · somente leitura</span></div></div>
+      <nav class="nav">${routes.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} /><span>${r.label}</span></a>`)}</nav>
       <div class="grow"></div>
       <${SyncDot} />
     </aside>
@@ -119,7 +122,7 @@ function ViewerApp() {
       </header>
       <div class="content"><${View} /></div>
     </main>
-    <nav class="tabbar">${VIEW_ROUTES.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} s=${20} /><span>${r.short || r.label}</span></a>`)}</nav>
+    ${!okrOnly && html`<nav class="tabbar">${routes.map((r) => html`<a href=${`#/${r.id}`} class=${route.id === r.id ? 'on' : ''}><${Icon} n=${r.icon} s=${20} /><span>${r.short || r.label}</span></a>`)}</nav>`}
     ${d && d.type === 'item' && html`<div class="drawer-bg" onClick=${(e) => { if (e.target === e.currentTarget) setUI({ drawer: null }); }}>
       <aside class="drawer"><${ItemView} id=${d.id} key=${d.id} /></aside>
     </div>`}
