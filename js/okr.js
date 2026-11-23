@@ -352,7 +352,8 @@ function LaunchSection({ s4, u }) {
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
                 ${g.pdvs && html`<tr class="hd"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
                   <tr class="good"><th scope="row">↳ Integrated with Keeta</th><td>${n0(g.pdvInt[i])}</td></tr>
-                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>`}
+                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>
+                  ${g.brands && g.pdvUnkMerchants && html`<tr class="unk"><th scope="row">↳ Merchants with unknown PDV (BD does not know)</th><td>${n0(g.pdvUnkMerchants[i])}</td></tr>`}`}
               </tbody></table>
               <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
                 <span class="bc-cov-l">${COV4[k]}${!segOk && html`<small> · ${(target - cov).toFixed(1)} pts to ${target}%</small>`}</span>

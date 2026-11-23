@@ -162,7 +162,7 @@ function buildOkr() {
   const BRK = ['noAnswer', 'printer', 'longTail', 'selfBuilt', 'orderingTool'];
   const bN = {}; const bO = {}; BRK.forEach((k) => { bN[k] = z(); bO[k] = z(); });
   const SEG = ['ska', 'lh', 'smb'];
-  const sg = {}; SEG.forEach((k) => { sg[k] = { n: z(), o: z(), iN: z(), iO: z(), pO: z(), pdv: z().map(() => new Set()), pdvInt: z().map(() => new Set()) }; });
+  const sg = {}; SEG.forEach((k) => { sg[k] = { n: z(), o: z(), iN: z(), iO: z(), pO: z(), pdv: z().map(() => new Set()), pdvInt: z().map(() => new Set()), unkN: z() }; });
   const totN = z(); const totO = z();
   tr.forEach((r) => {
     const c = CITY_COL[String(r[16]).trim()]; if (!c) return;
@@ -182,6 +182,8 @@ function buildOkr() {
       if (researched && !plat) d.pO[j] += o;
       // PDVs distintos do segmento (como "Total mapped PDVs" da Summary): sem sistemas da aba "Not a POS"
       const p = norm(plat);
+      // Merchants com PDV desconhecido: loja ainda não pesquisada (sem resposta, pendente, long tail, KAM) ou "Not Mapped"
+      if (!researched || p === 'not mapped') d.unkN[j] += 1;
       if (p && p !== 'not mapped' && !notPosSet.has(p)) { d.pdv[j].add(p); if (integ) d.pdvInt[j].add(p); }
     });
   });
@@ -208,7 +210,7 @@ function buildOkr() {
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])),
-      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvGap: d.pdv.map((x, j) => x.size - d.pdvInt[j].size) };
+      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvGap: d.pdv.map((x, j) => x.size - d.pdvInt[j].size), pdvUnkMerchants: d.unkN };
     if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], nonPosBrands: nonPosBrands[k], unkBrands: unkBrands[k] });
   });
 
