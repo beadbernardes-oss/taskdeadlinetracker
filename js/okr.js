@@ -397,31 +397,36 @@ function LaunchSection({ s4, u }) {
                 <span class="bc-seal-s">no segment at trigger</span>
               </span>`}
           </header>
-          ${SEGS4.map(([k, label]) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const target = T(k); const segOk = cov >= target;
+          <div class="bc-covs" role="list" aria-label=${`City ${CITIES[i]}: orders covered by segment`}>
+            ${SEGS4.map(([k, label], j) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const target = T(k); const segOk = cov >= target;
+              return html`<div class=${`bc-cv ${segOk ? 'is-ok' : ''}`} role="listitem" style=${`--j:${j}`}
+                aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
+                <span class="bc-cv-l"><b>${COV4[k]}</b></span>
+                <b class=${`bc-cv-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`} aria-hidden="true">${p1(cov)}</b>
+                <span class="bc-track" aria-hidden="true"><span class="bc-fill"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i></span><span class="ok-target" style=${`left:${target}%`}></span></span>
+                <small class="bc-cv-h" aria-hidden="true">${segOk ? `${target}% trigger met` : `${(target - cov).toFixed(1)} pts to the ${target}% trigger`}</small>
+              </div>`; })}
+          </div>
+          ${SEGS4.map(([k, label]) => { const g = s4.seg[k];
             return html`<div class="bc-seg">
               <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
                 ${g.brands
                   ? html`<tr class="hd"><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
-                      <tr class="hd"><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
+                      <tr class="hd grp"><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ Brands on an integrated PDV</th><td>${n0(g.intBrands[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ Brands on a PDV not integrated (gap)</th><td>${dash(g.gapBrands, i)}</td></tr>
                       ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on a non-POS system (ordering tool, self-built)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
                       <tr class="unk"><th scope="row">↳ Brands PDV unknown (BD does not know)</th><td>${dash(g.unkBrands, i)}</td></tr>`
-                  : html`<tr><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
+                  : html`<tr class="hd"><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
                       <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
-                ${g.pdvs && html`<tr class="hd"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
+                ${g.pdvs && html`<tr class="hd grp"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
                   <tr class="good"><th scope="row">↳ Integrated with Keeta</th><td>${n0(g.pdvInt[i])}</td></tr>
                   <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>
                   ${g.brands && g.pdvUnkMerchants && html`<tr class="unk"><th scope="row">↳ Merchants with unknown PDV (BD does not know)</th><td>${n0(g.pdvUnkMerchants[i])}</td></tr>`}`}
               </tbody></table>
-              <div class="bc-cov" role="img" aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
-                <span class="bc-cov-l">${COV4[k]}${!segOk && html`<small> · ${(target - cov).toFixed(1)} pts to ${target}%</small>`}</span>
-                <span class=${`bc-cov-v ${segOk ? 'ok-txt-good' : 'ok-txt-bad'}`}>${p1(cov)}</span>
-                <span class="bc-track"><span class="bc-fill"><i class="v-good" style=${`width:${Math.min(100, g.intPct[i])}%`}></i><i class="v-good-hatch" style=${`width:${Math.min(100 - g.intPct[i], g.printerPct[i])}%`}></i></span><span class="ok-target" style=${`left:${target}%`}></span></span>
-              </div>
             </div>`; })}
         </article>`; })}
       </div>
