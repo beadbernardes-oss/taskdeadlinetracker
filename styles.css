@@ -833,6 +833,27 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 
 /* Seção 4: battlecard de prontidão por cidade */
 .ok-lead { margin: -4px 0 12px; }
+/* Seção 4a: cascata de merchants por segmento */
+.ok-part { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--muted); border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 5px; margin-right: 8px; vertical-align: 2px; }
+.ok-parth { margin: 20px 0 10px; font-size: 14.5px; }
+.ok-wf-h { justify-content: space-between; }
+.ok-wf > p.small { margin: 4px 0 10px; }
+.wf-rows { display: grid; gap: 4px; }
+.wf-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 160px; align-items: center; gap: 14px; padding: 5px 0; }
+.wf-total { border-bottom: 1px solid var(--border); padding-bottom: 9px; margin-bottom: 2px; }
+.wf-l b { display: block; font-size: 13px; font-weight: 600; } .wf-l small { display: block; color: var(--muted); font-size: 11.5px; }
+.wf-track { position: relative; height: 20px; background: var(--surface-2); border-radius: 4px; }
+.wf-bar { position: absolute; top: 0; bottom: 0; background: var(--v-na); border-radius: 4px; transform-origin: left center; animation: wf-in .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+.wf-total .wf-bar { background: var(--text); }
+.wf-row.is-faint .wf-bar { background: var(--v-empty); box-shadow: inset 0 0 0 1px var(--v-empty-line); }
+.wf-guide { position: absolute; top: -9px; bottom: 0; border-left: 1px dashed var(--border-strong); }
+.wf-v { text-align: right; font-variant-numeric: tabular-nums; } .wf-v b { display: block; font-size: 14px; } .wf-v small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+@keyframes wf-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (max-width: 640px) {
+  .ok-wf-h { align-items: flex-start; flex-direction: column; }
+  .wf-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .wf-track { grid-column: 1 / -1; grid-row: 2; }
+}
 .ok-diff { margin: 16px 0 0; }
 .ok-diff > p.small { margin: 2px 0 10px; max-width: 72ch; }
 .ok-diff .ok-table tbody th { font-weight: 600; white-space: nowrap; }

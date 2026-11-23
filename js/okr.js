@@ -325,6 +325,49 @@ function DiffNote() {
   </div>`;
 }
 
+// Seção 4a: cascata da lista de merchants nos segmentos do battlecard.
+// Long tail = merchants SMB com menos de 5 pedidos/dia (status "Long tail" no Tracker); SKA e Local Heroes ficam inteiros,
+// como no battlecard. Sem o detalhe de long tail (script antigo), o SMB aparece inteiro.
+function SegWaterfall({ s4, u }) {
+  const c = CITIES.indexOf(u.okrWfCity || 'Total'); const city = CITIES[c];
+  const g = s4.seg;
+  const lt = g.smb.ltStores ? g.smb.ltStores[c] : null;
+  const total = g.ska.stores[c] + g.lh.stores[c] + g.smb.stores[c];
+  const ordTot = g.ska.orders ? g.ska.orders[c] + g.lh.orders[c] + g.smb.orders[c] : null;
+  const ord = (v) => (ordTot ? ` · ${p1(pct(v, ordTot))} of est. orders` : '');
+  const steps = [
+    { label: 'SKA Classic', n: g.ska.stores[c], o: g.ska.orders?.[c] },
+    { label: 'Local Heroes', n: g.lh.stores[c], o: g.lh.orders?.[c] },
+    ...(lt != null
+      ? [{ label: 'SMB', sub: '5+ orders/day', n: g.smb.stores[c] - lt, o: g.smb.orders?.[c] - g.smb.ltOrders?.[c] },
+        { label: 'Long tail', sub: 'SMB under 5 orders/day', n: lt, o: g.smb.ltOrders?.[c], faint: true }]
+      : [{ label: 'SMB', n: g.smb.stores[c], o: g.smb.orders?.[c] }]),
+  ];
+  let cum = 0;
+  return html`<div class="ok-card ok-wf">
+    <div class="ok-card-h ok-wf-h">
+      <h3><span class="ok-part">4a</span>Merchant segmentation</h3>
+      <${Seg} small value=${city} onChange=${(v) => setUI({ okrWfCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
+    </div>
+    <p class="muted small">How the ${city === 'Total' ? 'merchant list of X, Y and F' : `merchant list of city ${city}`} splits into the segments the battlecard uses.</p>
+    <div class="wf-rows">
+      <div class="wf-row wf-total">
+        <span class="wf-l"><b>All merchants</b></span>
+        <span class="wf-track"><i class="wf-bar" style="left:0;width:100%"></i></span>
+        <span class="wf-v"><b>${n0(total)}</b><small>100%</small></span>
+      </div>
+      ${steps.map((st, j) => { const left = pct(cum, total); const w = pct(st.n, total); cum += st.n;
+        return html`<div class=${`wf-row ${st.faint ? 'is-faint' : ''}`} style=${`--i:${j + 1}`}>
+          <span class="wf-l"><b>${st.label}</b>${st.sub && html`<small>${st.sub}</small>`}</span>
+          <span class="wf-track" role="img" aria-label=${`${st.label}: ${n0(st.n)} merchants, ${p1(w)} of the list${ord(st.o || 0)}`}>
+            <i class="wf-guide" style=${`left:${left}%`}></i><i class="wf-bar" style=${`left:${left}%;width:${Math.max(w, 0.4)}%`}></i></span>
+          <span class="wf-v"><b>${n0(st.n)}</b><small>${p1(w)} of merchants${ordTot && st.o != null ? html`<br />${p1(pct(st.o, ordTot))} of est. orders` : ''}</small></span>
+        </div>`; })}
+    </div>
+    ${lt == null && html`<p class="muted small ok-note">The long tail split shows up after the next sync of the sheet script.</p>`}
+  </div>`;
+}
+
 function LaunchSection({ s4, u }) {
   const T = (k) => TRIG4[k] ?? s4.target ?? 50;
   const cities = [1, 2, 3];
@@ -334,9 +377,11 @@ function LaunchSection({ s4, u }) {
   // Quem está mais perto do gatilho, para o cartão sem selo dizer o que falta
   const trigTxt = `${TRIG4.ska}% SKA Classic & Local Heroes · ${TRIG4.smb}% SMB`;
   return html`<section class="ok-sec">
-    <${SecHead} n="4" title="Launch readiness: city battlecard" hideKey="okrS4Hidden"
+    <${SecHead} n="4" title="Launch readiness: segmentation and city battlecard" hideKey="okrS4Hidden"
       summary=${`Secure to launch: ${secure.length ? secure.map((i) => `${CITIES[i]} (${passing(i).map(([, l]) => l).join(', ')})`).join(' · ') : 'none yet'} · trigger ${trigTxt}`} />
     ${!u.okrS4Hidden && html`<div id="ok-sec-4" class="ok-battle-wrap">
+      <${SegWaterfall} s4=${s4} u=${u} />
+      <h3 class="ok-parth"><span class="ok-part">4b</span>City battlecard</h3>
       <p class="muted small ok-lead"><b>Secure to launch:</b> SKA Classic or Local Heroes with ${TRIG4.ska}%+ of their est. orders covered, or SMB with ${TRIG4.smb}%+.</p>
       <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: 'Trigger', cls: 'lg-line' }] }]} />
       <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);

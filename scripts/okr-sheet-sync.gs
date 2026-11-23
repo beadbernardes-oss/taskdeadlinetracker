@@ -162,7 +162,7 @@ function buildOkr() {
   const BRK = ['noAnswer', 'printer', 'longTail', 'selfBuilt', 'orderingTool'];
   const bN = {}; const bO = {}; BRK.forEach((k) => { bN[k] = z(); bO[k] = z(); });
   const SEG = ['ska', 'lh', 'smb'];
-  const sg = {}; SEG.forEach((k) => { sg[k] = { n: z(), o: z(), iN: z(), iO: z(), pO: z(), pdv: z().map(() => new Set()), pdvInt: z().map(() => new Set()), unkN: z() }; });
+  const sg = {}; SEG.forEach((k) => { sg[k] = { n: z(), o: z(), iN: z(), iO: z(), pO: z(), pdv: z().map(() => new Set()), pdvInt: z().map(() => new Set()), unkN: z(), ltN: z(), ltO: z() }; });
   const totN = z(); const totO = z();
   tr.forEach((r) => {
     const c = CITY_COL[String(r[16]).trim()]; if (!c) return;
@@ -178,6 +178,7 @@ function buildOkr() {
       totN[j] += 1; totO[j] += o;
       if (cat) { bN[cat][j] += 1; bO[cat][j] += o; }
       const d = sg[seg]; d.n[j] += 1; d.o[j] += o;
+      if (cat === 'longTail') { d.ltN[j] += 1; d.ltO[j] += o; }
       if (researched && integ) { d.iN[j] += 1; d.iO[j] += o; }
       if (researched && !plat) d.pO[j] += o;
       // PDVs distintos do segmento (como "Total mapped PDVs" da Summary): sem sistemas da aba "Not a POS"
@@ -210,7 +211,8 @@ function buildOkr() {
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])),
-      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvGap: d.pdv.map((x, j) => x.size - d.pdvInt[j].size), pdvUnkMerchants: d.unkN };
+      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvGap: d.pdv.map((x, j) => x.size - d.pdvInt[j].size), pdvUnkMerchants: d.unkN,
+      orders: d.o.map(r1), ltStores: d.ltN, ltOrders: d.ltO.map(r1) };
     if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], nonPosBrands: nonPosBrands[k], unkBrands: unkBrands[k] });
   });
 
