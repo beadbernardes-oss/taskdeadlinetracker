@@ -938,6 +938,7 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 
 /* Battlecard: marcas com PDV desconhecido em tinta neutra; selo "Not secure to launch" no mesmo carimbo, em vermelho */
 .bc-tab tr.unk td { color: var(--muted); }
+.bc-tab tr.sub2 th { padding-left: 14px; }
 .bc-tab tr.hd th, .bc-tab tr.hd td { color: var(--text); } .bc-tab tr.hd td { font-weight: 600; }
 .bc-tab tr.grp th, .bc-tab tr.grp td { padding-top: 12px; }
 .bc-seal.is-not { --seal: var(--p0-text); }

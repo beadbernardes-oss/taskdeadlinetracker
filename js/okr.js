@@ -417,15 +417,15 @@ function LaunchSection({ s4, u }) {
                       <tr class="good"><th scope="row">↳ Brands on an integrated PDV</th><td>${n0(g.intBrands[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ Brands on a PDV not integrated (gap)</th><td>${dash(g.gapBrands, i)}</td></tr>
                       ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on a non-POS system (ordering tool, self-built)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
-                      <tr class="unk"><th scope="row">↳ Brands PDV unknown (BD does not know)</th><td>${dash(g.unkBrands, i)}</td></tr>`
+                      <tr class="unk"><th scope="row">↳ Brands PDV unknown (BD does not know)</th><td>${dash(g.unkBrands, i)}</td></tr>
+                      ${g.pdvUnkMerchants && html`<tr class="unk sub2"><th scope="row">↳↳ Merchants with unknown PDV (BD does not know)</th><td>${n0(g.pdvUnkMerchants[i])}</td></tr>`}`
                   : html`<tr class="hd"><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
                       <tr><th scope="row">↳ of which are integrated</th><td>${n0(g.intStores[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ % of orders integrated</th><td>${p1(g.intPct[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
                 ${g.pdvs && html`<tr class="hd grp"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
                   <tr class="good"><th scope="row">↳ Integrated with Keeta</th><td>${n0(g.pdvInt[i])}</td></tr>
-                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>
-                  ${g.brands && g.pdvUnkMerchants && html`<tr class="unk"><th scope="row">↳ Merchants with unknown PDV (BD does not know)</th><td>${n0(g.pdvUnkMerchants[i])}</td></tr>`}`}
+                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>`}
               </tbody></table>
             </div>`; })}
         </article>`; })}
