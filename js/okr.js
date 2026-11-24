@@ -150,7 +150,7 @@ function StoresSection({ s1, kr }) {
     // Gap por segmento (redes nacionais x pequenos e médios), pela gap list
     ...(s1.gapBreak && U().okrGapOpen ? [['ska', 'of which SKA'], ['smb', 'of which SMB']].map(([k, label]) => ({ k, label, sub2: true, br: true, tone: 'bad', src: 'gapBreak' })) : []),
     { k: 'printer', label: 'Printer', sub: true },
-    { k: 'nonPos', label: 'Ordering tool or self-built (not a POS)', sub: true },
+    { k: 'nonPos', label: 'Ordering tool or self-built (excluded from gap)', sub: true },
     { k: 'notDisc', label: 'Merchants not discovered', parent: true },
     { k: 'noAnswerOnly', label: 'No answer on the cold call', sub: true },
     { k: 'longTail', label: 'Long tail (less than 5 orders/day)', sub: true },
@@ -316,7 +316,8 @@ function DiffNote() {
         <tr><th scope="row">Integrated PDV</th><td><${Yes} /></td><td><${Yes} /></td></tr>
         <tr><th scope="row">PDV known, not integrated (gap)</th><td><${Yes} /></td><td><${No} /> <span class="muted small">can't receive orders yet</span></td></tr>
         <tr><th scope="row">Printer (no PDV)</th><td><${Yes} /></td><td><${Yes} /> <span class="muted small">receives orders by printer</span></td></tr>
-        <tr><th scope="row">Ordering tool or self-built</th><td><${Yes} /></td><td><${No} /> <span class="muted small">no PDV to integrate</span></td></tr>
+        <tr><th scope="row">Ordering tool</th><td><${Yes} /></td><td><${No} /> <span class="muted small">not a PDV, nothing to integrate</span></td></tr>
+        <tr><th scope="row">Self-built (brand's own PDV)</th><td><${Yes} /></td><td><${No} /> <span class="muted small">integrating depends on the brand signing with Keeta</span></td></tr>
         <tr><th scope="row">Base (100%)</th><td>All est. orders in the city</td><td>Est. orders of that segment in the city</td></tr>
         <tr><th scope="row">Target</th><td>${KR1_TARGET}%, average of X, Y, F</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
       </tbody>
@@ -416,7 +417,7 @@ function LaunchSection({ s4, u }) {
                       <tr class="hd grp"><th scope="row">${label} brand list</th><td>${n0(g.brands[i])}</td></tr>
                       <tr class="good"><th scope="row">↳ Brands on an integrated PDV</th><td>${n0(g.intBrands[i])}</td></tr>
                       <tr class="bad"><th scope="row">↳ Brands on a PDV not integrated (gap)</th><td>${dash(g.gapBrands, i)}</td></tr>
-                      ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on a non-POS system (ordering tool, self-built)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
+                      ${g.nonPosBrands && html`<tr class="unk"><th scope="row">↳ Brands on an ordering tool or self-built (excluded from gap)</th><td>${dash(g.nonPosBrands, i)}</td></tr>`}
                       <tr class="unk"><th scope="row">↳ Brands PDV unknown (BD does not know)</th><td>${dash(g.unkBrands, i)}</td></tr>
                       ${g.pdvUnkMerchants && html`<tr class="unk sub2"><th scope="row">↳↳ Merchants with unknown PDV (BD does not know)</th><td>${n0(g.pdvUnkMerchants[i])}</td></tr>`}`
                   : html`<tr class="hd"><th scope="row">${label} merchant list</th><td>${n0(g.stores[i])}</td></tr>
@@ -425,13 +426,14 @@ function LaunchSection({ s4, u }) {
                       <tr class="bad"><th scope="row">↳ % of orders not integrated</th><td>${p1(100 - g.intPct[i])}</td></tr>`}
                 ${g.pdvs && html`<tr class="hd grp"><th scope="row">PDVs used by ${label} merchants</th><td>${n0(g.pdvs[i])}</td></tr>
                   <tr class="good"><th scope="row">↳ Integrated with Keeta</th><td>${n0(g.pdvInt[i])}</td></tr>
-                  <tr class="bad"><th scope="row">↳ Not integrated</th><td>${n0(g.pdvGap[i])}</td></tr>`}
+                  <tr class="bad"><th scope="row">↳ Not integrated (gap)</th><td>${n0(g.pdvGap[i])}</td></tr>
+                  ${g.pdvSelf && html`<tr class="unk"><th scope="row">↳ Self-built, not integrated (brand must sign)</th><td>${n0(g.pdvSelf[i])}</td></tr>`}`}
               </tbody></table>
             </div>`; })}
         </article>`; })}
       </div>
       <${DiffNote} />
-      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores. PDVs = distinct POS vendors found for the segment's merchants, without the systems on the "Not a POS" tab; a vendor used by more than one segment counts in each.</p>
+      <p class="muted small ok-note">Segments from the "Local Heroes vs Classic SKA" tab. Local Heroes = candidates that meet the size criterion (to be validated); SMB = all other stores. PDVs = distinct POS vendors found for the segment's merchants, without the ordering tools on the "Not a POS" tab; each brand's self-built system counts as its own PDV, outside the gap; a vendor used by more than one segment counts in each.</p>
     </div>`}
   </section>`;
 }

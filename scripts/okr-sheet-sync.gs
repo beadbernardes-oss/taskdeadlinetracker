@@ -85,7 +85,7 @@ function buildOkr() {
     posIntegratedPct: '% of merchants with a POS found on an integrated POS', ordersIntegratedPct: '% of all est. orders on an integrated POS',
     ordersGapPct: '% of all est. orders in the gap', vendors: 'POS vendors found', vendorsIntegrated: 'integrated with Keeta',
     vendorsGap: 'not integrated (= gap list)', noResponse: 'Merchants with no response', noResponsePct: '% of covered merchants with no response',
-    printer: 'Merchants on a printer (no POS)', excluded: 'Merchants excluded from gap (ordering tool or self-built)',
+    printer: 'Merchants on a printer (no POS)', excluded: 'Merchants excluded from gap',
     brands: 'Brands (total)', brandsIntegrated: 'on an integrated POS', brandsGap: 'on a POS not integrated (gap)',
     brandsUnknown: 'POS unknown (BD does not know)', skaOrdersPct: 'SKA orders covered (all SKA orders)',
   };
@@ -136,18 +136,22 @@ function buildOkr() {
   const tr = sheet('Tracker').getRange('A2:Q' + sheet('Tracker').getLastRow()).getDisplayValues();
   const notPos = sheet('Not a POS').getDataRange().getDisplayValues().slice(1).map((r) => norm(r[0])).filter((v) => v && v !== 'total');
   const notPosSet = new Set(notPos);
+  // Self-built é o PDV próprio da marca: é PDV (não vai na aba "Not a POS"), mas fica fora do gap porque integrar
+  // depende da marca assinar com a Keeta. Reconhecido pelo nome; "Self-built" genérico vira "<marca> self-built".
   const selfBuilt = (v) => /self.?built/.test(v);
+  const sysName = (p, brand) => (/^self.?built$/.test(p) ? norm(brand) + ' self-built' : p);
+  const outOfGap = (p) => selfBuilt(p) || notPosSet.has(p); // ordering tool ou self-built
   const lh = sheet('Local Heroes vs Classic SKA').getDataRange().getDisplayValues();
   const lhHead = lh.findIndex((r) => norm(r[0]) === 'city' && norm(r[1]) === 'brand' && norm(r[2]).indexOf('class') === 0);
   const z = () => [0, 0, 0, 0];
   const cls = {};
   // Marcas por segmento e cidade (battlecard). Coluna I "POS found (Tracker)", coluna J "On integrated POS?":
-  // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; sistema que não é PDV = todos os sistemas
-  // de I estão na aba "Not a POS" (ordering tool, self-built); senão, PDV não integrado (gap)
+  // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; fora do gap = todos os sistemas de I são
+  // ordering tool (aba "Not a POS") ou self-built; senão, PDV não integrado (gap)
   const brands = { ska: z(), lh: z() }; const intBrands = { ska: z(), lh: z() };
   const gapBrands = { ska: z(), lh: z() }; const unkBrands = { ska: z(), lh: z() };
   const nonPosBrands = { ska: z(), lh: z() };
-  const allNotPos = (pos) => pos.split(',').map((x) => x.trim()).filter(Boolean).every((x) => notPosSet.has(x));
+  const allNotPos = (pos) => pos.split(',').map((x) => x.trim()).filter(Boolean).every(outOfGap);
   if (lhHead >= 0) for (let i = lhHead + 1; i < lh.length; i++) {
     const r = lh[i]; if (!(r[0] in CITY_COL)) continue;
     const key = r[0] + '|' + norm(r[1]);
@@ -172,7 +176,7 @@ function buildOkr() {
     if (st.indexOf('No signal') === 0) cat = 'noAnswer';
     else if (st.indexOf('Long tail') === 0) cat = 'longTail';
     else if (researched && !plat) cat = 'printer';
-    else if (researched && !integ && notPosSet.has(norm(plat))) cat = selfBuilt(norm(plat)) ? 'selfBuilt' : 'orderingTool';
+    else if (researched && !integ && outOfGap(norm(plat))) cat = selfBuilt(norm(plat)) ? 'selfBuilt' : 'orderingTool';
     const seg = cls[String(r[16]).trim() + '|' + norm(r[2])] || 'smb';
     [0, c].forEach((j) => {
       totN[j] += 1; totO[j] += o;
@@ -181,11 +185,12 @@ function buildOkr() {
       if (cat === 'longTail') { d.ltN[j] += 1; d.ltO[j] += o; }
       if (researched && integ) { d.iN[j] += 1; d.iO[j] += o; }
       if (researched && !plat) d.pO[j] += o;
-      // PDVs distintos do segmento (como "Total mapped PDVs" da Summary): sem sistemas da aba "Not a POS"
-      const p = norm(plat);
+      // PDVs distintos do segmento (como "Total mapped PDVs" da Summary): sem ordering tools (aba "Not a POS").
+      // Self-built conta como PDV da marca; quando não integrado, vai à parte (fora do gap), não em "not integrated".
+      const p = sysName(norm(plat), r[2]);
       // Merchants com PDV desconhecido: loja ainda não pesquisada (sem resposta, pendente, long tail, KAM) ou "Not Mapped"
       if (!researched || p === 'not mapped') d.unkN[j] += 1;
-      if (p && p !== 'not mapped' && !notPosSet.has(p)) { d.pdv[j].add(p); if (integ) d.pdvInt[j].add(p); }
+      if (p && p !== 'not mapped' && (selfBuilt(p) || !notPosSet.has(p))) { d.pdv[j].add(p); if (integ) d.pdvInt[j].add(p); }
     });
   });
   const noAnswerBreak = {};
@@ -211,7 +216,9 @@ function buildOkr() {
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
     seg4[k] = { stores, intStores, intPct, printerPct, coveredPct: intPct.map((v, j) => r1(v + printerPct[j])),
-      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvGap: d.pdv.map((x, j) => x.size - d.pdvInt[j].size), pdvUnkMerchants: d.unkN,
+      pdvs: d.pdv.map((x) => x.size), pdvInt: d.pdvInt.map((x) => x.size), pdvUnkMerchants: d.unkN,
+      pdvSelf: d.pdv.map((x, j) => [...x].filter((p) => selfBuilt(p) && !d.pdvInt[j].has(p)).length),
+      pdvGap: d.pdv.map((x, j) => [...x].filter((p) => !selfBuilt(p) && !d.pdvInt[j].has(p)).length),
       orders: d.o.map(r1), ltStores: d.ltN, ltOrders: d.ltO.map(r1) };
     if (brands[k]) Object.assign(seg4[k], { brands: brands[k], intBrands: intBrands[k], gapBrands: gapBrands[k], nonPosBrands: nonPosBrands[k], unkBrands: unkBrands[k] });
   });
