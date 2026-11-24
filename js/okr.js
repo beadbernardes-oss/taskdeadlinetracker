@@ -220,6 +220,10 @@ function PdvSection({ s2, d, e, u }) {
   const gapAll = d.gap.filter((g) => gm(g) > 0).sort((a, b) => go(b) - go(a));
   const gapRows = gapAll.filter((g) => will === 'all' || willCat(g) === will);
   const maxO = Math.max(1, ...gapAll.map(go));
+  // Self-built aparece na lista como "Depends on brand", mas fica fora dos totais do gap (conta em "excluded from gap")
+  const selfAll = gapAll.filter((g) => willCat(g) === 'brand');
+  const gapOnly = gapAll.filter((g) => willCat(g) !== 'brand');
+  const selfVendors = d.gap.filter((g) => willCat(g) === 'brand').length;
   const willCount = (w) => gapAll.filter((g) => willCat(g) === w).length;
   const cnt = (key) => CITIES.map((_, i) => html`<td class="num">${s2[key][i]}</td>`);
   const withPct = (o) => CITIES.map((_, i) => html`<td class="num">${o.n[i]} <span class="muted">(${p1(o.p[i])})</span></td>`);
@@ -271,14 +275,15 @@ function PdvSection({ s2, d, e, u }) {
 
   <section class="ok-sec">
     <${SecHead} n="3" title="Gap list: PDV vendors not integrated with Keeta" hideKey="okrGapHidden"
-      summary=${`${d.gap.length} vendors · ${n0(e.gap[0])} merchants · ${p1(e.ordersGapPct[0])} of all est. orders`} />
+      summary=${`${d.gap.length - selfVendors} vendors · ${n0(e.gap[0])} merchants · ${p1(e.ordersGapPct[0])} of all est. orders${selfVendors ? ` · plus ${selfVendors} self-built (depends on brand)` : ''}`} />
     ${!u.okrGapHidden && html`<div class="ok-card" id="ok-sec-3">
       <div class="ok-card-h ok-filters">
         <${Seg} small value=${will} onChange=${(v) => setUI({ okrWill: v })} options=${[{ value: 'all', label: `All ${gapAll.length}` }, ...WILL_ORDER.map((w) => ({ value: w, label: `${WILL[w]} ${willCount(w)}` }))]} />
         <div class="grow"></div>
         <${Seg} small value=${city} onChange=${(v) => setUI({ okrCity: v })} options=${CITIES.map((x) => ({ value: x, label: cityName(x) }))} />
       </div>
-      <p class="muted small">${n0(e.gap[c])} merchants · ${nOrd(gapAll.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])}) · ${scope}</p>
+      <p class="muted small">Gap: ${n0(e.gap[c])} merchants · ${nOrd(gapOnly.reduce((a, g) => a + go(g), 0))} est. orders/day (${p1(e.ordersGapPct[c])}) · ${scope}</p>
+      ${selfAll.length > 0 && html`<p class="muted small">Also listed: ${selfAll.length} self-built system${selfAll.length === 1 ? '' : 's'} · ${n0(selfAll.reduce((a, g) => a + gm(g), 0))} merchants · ${nOrd(selfAll.reduce((a, g) => a + go(g), 0))} est. orders/day. Depends on the brand signing with Keeta, so these merchants count in "excluded from gap", not in the gap totals.</p>`}
       <div class="ok-tablewrap"><table class="ok-table ok-gap">
         <thead><tr><th scope="col">PDV vendor</th><th scope="col">Willingness</th><th scope="col">TIMs status</th><th scope="col" class="num">Merchants</th><th scope="col" class="num">Est. orders/day</th><th scope="col" class="num">% of all orders</th><th scope="col">Segment</th></tr></thead>
         <tbody>${gapRows.map((g) => html`<tr>
