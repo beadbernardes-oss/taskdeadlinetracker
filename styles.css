@@ -844,7 +844,7 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
   .ok-diff .ok-table tbody th, .ok-diff .ok-table thead th { white-space: normal; }
   .ok-diff .ok-table th, .ok-diff .ok-table td { padding: 7px 5px; }
 }
-.ok-battle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ok-battle { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 14px; }
 .ok-bc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ok-bc-card.is-secure { border-color: color-mix(in srgb, var(--ok) 22%, var(--border)); }
 .bc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -869,7 +869,10 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .bc-track .ok-target { top: -4px; bottom: -4px; }
 /* Polish: os cartões só ficam lado a lado quando cada um tem espaço (≥ ~300px); abaixo disso, um por linha */
 .ok-battle-wrap { container-type: inline-size; }
+/* 4 cidades: duas por linha até caberem as quatro (≥ ~300px cada) */
+@container (max-width: 1260px) { .ok-battle { grid-template-columns: repeat(var(--n2, 3), minmax(0, 1fr)); } }
 @container (max-width: 940px) { .ok-battle { grid-template-columns: 1fr; } }
+.bc-cv.is-empty .bc-cv-v { color: var(--muted); }
 .ok-legend i.lg-line { width: 2px; height: 12px; border-radius: 1px; background: var(--text); }
 .ok-bc-card { container-type: inline-size; }
 /* Selo "Secure to launch" como carimbo de borracha: girado, borda dupla, tinta levemente gasta */

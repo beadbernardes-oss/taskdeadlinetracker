@@ -7,7 +7,15 @@ import { html, render, useState, useEffect } from './lib.js';
 import { S, U, setUI } from './store.js';
 import { Seg, Icon, Empty } from './ui.js';
 
-const CITIES = ['Total', 'X', 'Y', 'F'];
+// Cidades vêm dos dados (posição 0 = Total). Envios antigos, sem a lista, têm só X, Y e F.
+let CITIES = ['Total', 'X', 'Y', 'F'];
+let CI = [1, 2, 3]; // posições das cidades, sem o Total
+const setCities = (d) => {
+  const n = d.exec?.merchants?.length || 4;
+  CITIES = (d.cities && d.cities.length === n ? d.cities : ['Total', 'X', 'Y', 'F', 'C'].slice(0, n));
+  CI = CITIES.map((_, i) => i).slice(1);
+};
+const cityList = () => CI.map((i) => CITIES[i]).join(', ');
 const cityName = (x) => (x === 'Total' ? 'All cities' : x);
 const nf = new Intl.NumberFormat('en-US');
 const n0 = (v) => nf.format(Math.round(v));
@@ -38,8 +46,9 @@ const ST = {
   pending: { label: 'Pending answer', cls: 'v-wait' },
   noAnswer: { label: 'No answer or long tail', cls: 'v-empty' },
 };
-const Z4 = { s: [0, 0, 0, 0], o: [0, 0, 0, 0] };
-const addSO = (...xs) => ({ s: [0, 1, 2, 3].map((i) => xs.reduce((a, x) => a + x.s[i], 0)), o: [0, 1, 2, 3].map((i) => xs.reduce((a, x) => a + x.o[i], 0)) });
+const zeros = () => CITIES.map(() => 0);
+const Z4 = { get s() { return zeros(); }, get o() { return zeros(); } };
+const addSO = (...xs) => ({ s: CITIES.map((_, i) => xs.reduce((a, x) => a + (x.s[i] || 0), 0)), o: CITIES.map((_, i) => xs.reduce((a, x) => a + (x.o[i] || 0), 0)) });
 // Grupos da seção 1: integrada, gap e pendente vêm da Summary; printer, ordering tool, self-built, sem resposta e long tail, do Tracker
 function discovery(s1) {
   const nb = s1.noAnswerBreak;
@@ -137,8 +146,8 @@ function StoresSection({ s1, kr }) {
   const target = KR1_TARGET;
   const D = discovery(s1);
   const discO = (i) => D.disc.o[i];
-  const avg3 = (discO(1) + discO(2) + discO(3)) / 3;
-  const below = [1, 2, 3].filter((i) => discO(i) < target);
+  const avg3 = CI.reduce((a, i) => a + discO(i), 0) / CI.length;
+  const below = CI.filter((i) => discO(i) < target);
   const ordersParts = (i) => ['integrated', 'gap', 'printer', 'nonPos', 'pending', 'noAnswer'].map((k) => {
     const v = D[k].o[i];
     return { v, cls: ST[k].cls, label: ST[k].label, text: `${p1(v)} of est. orders · ≈ ${n0(s1.orders[i] * v / 100)} orders/day` };
@@ -158,7 +167,7 @@ function StoresSection({ s1, kr }) {
   ];
   return html`<section class="ok-sec">
     <${SecHead} n="1" title="Stores and orders" hideKey="okrS1Hidden"
-      summary=${`Discovered: ${p1(avg3)} of est. orders (average of X, Y, F) · target ${target}%`} />
+      summary=${`Discovered: ${p1(avg3)} of est. orders (average of ${cityList()}) · target ${target}%`} />
     ${!U().okrS1Hidden && html`<div id="ok-sec-1">
 
     <div class="ok-card ok-kr">
@@ -166,18 +175,18 @@ function StoresSection({ s1, kr }) {
         <div class="kr-title"><h3>Est. orders covered by discovery</h3><p class="muted small kr-sub">We know how the store would accept Keeta orders: integrated PDV, PDV not integrated, printer, ordering tool or self-built.</p></div>
         <div class="kr-score">
           <span class=${`kr-num ${avg3 >= target ? 'is-ok' : 'is-bad'}`}><${CountUp} v=${avg3} fmt=${p1} /></span>
-          <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of X, Y, F (${3} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
+          <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of ${cityList()} (${CI.length} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
         </div>
       </div>
       <p class=${`kr-call ${below.length ? 'is-bad' : 'is-ok'}`}><${Icon} n=${below.length ? 'alert' : 'check'} s=${15} />
         <span>${below.length
           ? html`To reach ${target}%, more est. orders/day need discovery: ${below.map((i, j) => html`${j ? ' · ' : ''}<b>${CITIES[i]}</b> ≈ ${n0((target - discO(i)) * s1.orders[i] / 100)}`)}`
-          : `All 3 cities are at or above the ${target}% target.`}</span>
+          : `All ${CI.length} cities are at or above the ${target}% target.`}</span>
       </p>
       <${Legend} groups=${[{ title: 'Discovered', items: [ST.integrated, ST.gap, ST.printer, ST.nonPos] }, { title: 'Not discovered', items: [ST.pending, ST.noAnswer] }]} />
       <div class="kr-rows">
         <div class="kr-scale" aria-hidden="true"><span></span><span class="kr-ticks"><i style="left:0">0%</i><i class="t" style=${`left:${target}%`}>Target ${target}%</i><i style="left:100%">100%</i></span><span></span></div>
-        ${[1, 2, 3, 0].map((i, j) => { const ok = discO(i) >= target;
+        ${[...CI, 0].map((i, j) => { const ok = discO(i) >= target;
           return html`<div class=${`kr-row ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
             <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${n0(s1.orders[i])} orders/day</small></span>
             <${Bar} id=${`k${i}`} label=${cityName(CITIES[i])} parts=${ordersParts(i)} total=${ordersParts(i).reduce((a, p) => a + p.v, 0)} split=${4} target=${target} />
@@ -189,7 +198,7 @@ function StoresSection({ s1, kr }) {
     <div class="ok-card">
       <div class="ok-tablewrap"><table class="ok-table ok-mt ok-s1">
         <thead>
-          <tr class="grp-h"><td></td>${CITIES.map((x) => html`<th scope="colgroup" colspan="2">${x === 'Total' ? 'Total (X + Y + F)' : `City ${x}`}</th>`)}</tr>
+          <tr class="grp-h"><td></td>${CITIES.map((x) => html`<th scope="colgroup" colspan="2">${x === 'Total' ? `Total (${CI.map((i) => CITIES[i]).join(' + ')})` : `City ${x}`}</th>`)}</tr>
           <tr><th scope="col">Metric</th>${CITIES.map((x) => html`<th scope="col" class="num">${x} – Stores</th><th scope="col" class="num">${x} – Orders</th>`)}</tr>
         </thead>
         <tbody>
@@ -239,13 +248,13 @@ function PdvSection({ s2, d, e, u }) {
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
       <p class="kr-call is-bad"><${Icon} n="alert" s=${15} />
         <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
-          ${[3, 2, 1].map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
+          ${[...CI].reverse().map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
       </p>
       ${s2.willing.n[0] > 0 && html`<p class="pdv-win"><i class="v-good-hatch" aria-hidden="true"></i>
         <span><b>Quick win:</b> ${s2.willing.n[0]} willing PDV${s2.willing.n[0] === 1 ? '' : 's'} already hold ${p1(s2.willing.p[0])} of pending orders.</span></p>`}
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
       <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
-      ${[1, 2, 3, 0].map((i, j) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
+      ${[...CI, 0].map((i, j) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
         <span class="ok-slabel"><b>${cityName(CITIES[i])}</b><small>${s2.pending[i]} on gap</small></span>
         <${Bar} id=${`p${i}`} label=${cityName(CITIES[i])} total=${s2.mapped[i]} split=${1}
           parts=${[{ v: s2.integrated[i], cls: 'v-good', label: PDV.integrated.label, short: `${s2.integrated[i]}`, text: `${s2.integrated[i]} PDVs · ${p1(pct(s2.integrated[i], s2.mapped[i]))} of mapped PDVs` },
@@ -324,7 +333,7 @@ function DiffNote() {
         <tr><th scope="row">Ordering tool</th><td><${Yes} /></td><td><${No} /> <span class="muted small">not a PDV, nothing to integrate</span></td></tr>
         <tr><th scope="row">Self-built (brand's own PDV)</th><td><${Yes} /></td><td><${No} /> <span class="muted small">integrating depends on the brand signing with Keeta</span></td></tr>
         <tr><th scope="row">Base (100%)</th><td>All est. orders in the city</td><td>Est. orders of that segment in the city</td></tr>
-        <tr><th scope="row">Target</th><td>${KR1_TARGET}%, average of X, Y, F</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
+        <tr><th scope="row">Target</th><td>${KR1_TARGET}%, average of ${cityList()}</td><td>Per city: ${TRIG4.ska}% SKA Classic & Local Heroes, ${TRIG4.smb}% SMB</td></tr>
       </tbody>
     </table></div>
     <p class="muted small ok-note">Brand counts on the cards are for reading only; the % is weighted by each store's est. orders.</p>
@@ -333,8 +342,10 @@ function DiffNote() {
 
 function LaunchSection({ s4, u }) {
   const T = (k) => TRIG4[k] ?? s4.target ?? 50;
-  const cities = [1, 2, 3];
-  const passing = (i) => SEGS4.filter(([k]) => s4.seg[k].coveredPct[i] >= T(k));
+  const cities = CI;
+  // Segmento sem lojas na cidade (ex.: aba de Local Heroes ainda sem a cidade) não conta para o gatilho
+  const has = (k, i) => (s4.seg[k].stores?.[i] || 0) > 0;
+  const passing = (i) => SEGS4.filter(([k]) => has(k, i) && s4.seg[k].coveredPct[i] >= T(k));
   const ready = (i) => passing(i).length > 0;
   const secure = cities.filter(ready);
   // Quem está mais perto do gatilho, para o cartão sem selo dizer o que falta
@@ -345,7 +356,7 @@ function LaunchSection({ s4, u }) {
     ${!u.okrS4Hidden && html`<div id="ok-sec-4" class="ok-battle-wrap">
       <p class="muted small ok-lead"><b>Secure to launch:</b> SKA Classic or Local Heroes with ${TRIG4.ska}%+ of their est. orders covered, or SMB with ${TRIG4.smb}%+.</p>
       <${Legend} groups=${[{ title: 'Orders covered', items: [{ label: 'Integrated PDV', cls: 'v-good' }, { label: 'Printer', cls: 'v-good-hatch' }, { label: 'Trigger', cls: 'lg-line' }] }]} />
-      <div class="ok-battle">${cities.map((i) => { const ok = ready(i); const pass = passing(i);
+      <div class="ok-battle" style=${`--n:${cities.length};--n2:${cities.length > 3 ? 2 : cities.length}`}>${cities.map((i) => { const ok = ready(i); const pass = passing(i);
         return html`<article class=${`ok-bc-card ${ok ? 'is-secure' : ''}`}>
           <header class="bc-head">
             <h3>City ${CITIES[i]}</h3>
@@ -360,6 +371,10 @@ function LaunchSection({ s4, u }) {
           </header>
           <div class="bc-covs" role="list" aria-label=${`City ${CITIES[i]}: orders covered by segment`}>
             ${SEGS4.map(([k, label], j) => { const g = s4.seg[k]; const cov = g.coveredPct[i]; const target = T(k); const segOk = cov >= target;
+              if (!has(k, i)) return html`<div class="bc-cv is-empty" role="listitem" style=${`--j:${j}`}>
+                <span class="bc-cv-l"><b>${COV4[k]}</b></span><b class="bc-cv-v muted">—</b>
+                <small class="bc-cv-h">No ${label} merchants in this city yet</small>
+              </div>`;
               return html`<div class=${`bc-cv ${segOk ? 'is-ok' : ''}`} role="listitem" style=${`--j:${j}`}
                 aria-label=${`${label}: ${p1(cov)} of ${label} orders covered (integrated ${p1(g.intPct[i])} + printer ${p1(g.printerPct[i])}); trigger ${target}%`}>
                 <span class="bc-cv-l"><b>${COV4[k]}</b></span>
@@ -368,7 +383,7 @@ function LaunchSection({ s4, u }) {
                 <small class="bc-cv-h" aria-hidden="true">${segOk ? `${target}% trigger met` : `${(target - cov).toFixed(1)} pts to the ${target}% trigger`}</small>
               </div>`; })}
           </div>
-          ${SEGS4.map(([k, label]) => { const g = s4.seg[k];
+          ${SEGS4.filter(([k]) => has(k, i)).map(([k, label]) => { const g = s4.seg[k];
             return html`<div class="bc-seg">
               <div class="bc-seg-h"><b>${label}</b></div>
               <table class="bc-tab"><tbody>
@@ -401,6 +416,7 @@ function LaunchSection({ s4, u }) {
 export function Okr() {
   const d = S().okr3; const u = U();
   if (!d || !d.s1 || !d.s2) return html`<div class="view okr"><${Empty} text="No OKR3 data yet." icon="list" /></div>`;
+  setCities(d);
   return html`<div class="view okr">
     <div class="toolbar">
       <div class="ok-head"><h2>Epicenters PDV coverage</h2><span class="muted small">${d.syncedAt

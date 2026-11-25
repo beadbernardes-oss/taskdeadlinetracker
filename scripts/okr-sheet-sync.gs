@@ -14,7 +14,9 @@
  */
 
 const OKR_ENDPOINT = 'https://bskbumrpbbyujlutlipa.supabase.co/functions/v1/okr-ingest';
-const CITY_COL = { 'Brasília': 1, 'Belo Horizonte': 2, 'Fortaleza': 3 }; // X, Y, F (coluna "City" do Tracker)
+const CITY_COL = { 'Brasília': 1, 'Belo Horizonte': 2, 'Fortaleza': 3, 'Curitiba': 4 }; // X, Y, F, C (coluna "City" do Tracker)
+const CITY_TAGS = ['x', 'y', 'f', 'c']; // como as cidades aparecem nos cabeçalhos da Summary, na ordem do CITY_COL
+const NC = CITY_TAGS.length + 1; // posições nos números: 0 = Total, depois uma por cidade
 
 /** Cria os gatilhos (mudança na planilha + a cada hora) e envia agora. */
 function setup() {
@@ -73,12 +75,23 @@ const findRow = (rows, text, from) => {
   for (let i = from || 0; i < rows.length; i++) if (norm(rows[i][2]).replace(/^↳\s*/, '').indexOf(norm(text)) === 0) return i;
   throw new Error('Linha não encontrada na Summary: ' + text);
 };
+// Acha colunas pelo texto do cabeçalho (assim uma coluna nova na Summary não desalinha a leitura).
+// names: lista de cabeçalhos; aceita igual ao texto (sem diferenciar maiúsculas) ou, com '*' no fim, começando por ele.
+const hk = (s) => norm(s).replace(/[–—]/g, '-'); // "X – Stores" e "X - Stores" valem igual
+const colsOf = (head, names, where) => names.map((n) => {
+  const want = hk(n); const pre = want.slice(-1) === '*' ? want.slice(0, -1) : null;
+  const i = head.findIndex((h) => (pre !== null ? hk(h).indexOf(pre) === 0 : hk(h) === want));
+  if (i < 0) throw new Error('Coluna "' + n + '" não encontrada em ' + where + ' da Summary');
+  return i;
+});
+const cityHeads = (fmt) => ['total'].concat(CITY_TAGS).map(fmt); // ex.: (c) => c + ' – stores'
+const seq = (n) => Array.from({ length: n }, (_, i) => i);
 
 function buildOkr() {
   const ss = SpreadsheetApp.getActive();
   const sum = sheet('Summary').getDataRange().getDisplayValues();
 
-  // Executive view (linhas 2 a 24): colunas D (Total), E (X), F (Y), G (F)
+  // Executive view (linhas 2 a 24): colunas Total, X, Y, F, C, achadas pelo cabeçalho "Executive view"
   const EXEC = {
     merchants: 'Merchants in list', orders: 'Estimated orders', covered: 'Merchants covered by discovery',
     pos: 'Merchants with a POS found', integrated: 'Merchants on a POS integrated with Keeta', gap: 'Merchants on a POS not integrated (gap)',
@@ -90,45 +103,63 @@ function buildOkr() {
     brandsUnknown: 'POS unknown (BD does not know)', skaOrdersPct: 'SKA orders covered (all SKA orders)',
   };
   const execRows = sum.slice(0, 25);
+  const execCols = colsOf(execRows[findRow(execRows, 'Executive view')], cityHeads((c) => c), 'Executive view');
   const exec = {};
-  Object.keys(EXEC).forEach((k) => { const r = execRows[findRow(execRows, EXEC[k])]; exec[k] = [3, 4, 5, 6].map((c) => num(r[c])); });
+  Object.keys(EXEC).forEach((k) => { const r = execRows[findRow(execRows, EXEC[k])]; exec[k] = execCols.map((c) => num(r[c])); });
 
-  // Gap list: do cabeçalho "Willingness" até "Total gap merchants"
+  // Gap list: do cabeçalho "Willingness" até "Total gap merchants"; m e o = merchants e pedidos por cidade (X, Y, F, C)
   let h = sum.findIndex((r) => norm(r[0]) === 'willingness');
   if (h < 0) throw new Error('Cabeçalho da gap list não encontrado na Summary');
+  const gh = sum[h];
+  const gm = colsOf(gh, CITY_TAGS.map((c) => 'Merchants (' + c + ')'), 'gap list');
+  const go = colsOf(gh, CITY_TAGS.map((c) => 'Est. orders (' + c + ')'), 'gap list');
+  const [gSeg] = colsOf(gh, ['Segment*'], 'gap list');
+  let gOther = -1; try { [gOther] = colsOf(gh, ['Also mapped*'], 'gap list'); } catch (e) { /* coluna opcional */ }
   const gap = [];
   for (let i = h + 1; i < sum.length; i++) {
     const r = sum[i];
     if (norm(r[2]) === 'total gap merchants') break;
     if (!String(r[2]).trim()) continue;
-    gap.push({ vendor: String(r[2]).trim(), will: norm(r[0]), status: String(r[1]).trim(), m: [num(r[6]), num(r[9]), num(r[12])], o: [num(r[7]), num(r[10]), num(r[13])], seg: String(r[15]).trim(), other: String(r[16] || '').trim() });
+    gap.push({ vendor: String(r[2]).trim(), will: norm(r[0]), status: String(r[1]).trim(), m: gm.map((c) => num(r[c])), o: go.map((c) => num(r[c])),
+      seg: String(r[gSeg] || '').trim(), other: gOther >= 0 ? String(r[gOther] || '').trim() : '' });
   }
 
-  // 1. Lojas e pedidos: D/E = Total lojas/pedidos, F/G = X, H/I = Y, J/K = F
+  // Seções 1 e 3: linha "Metric" logo abaixo do título, com "Total – Stores", "Total – Orders", "X – Stores"...
+  const metricHead = (from, where) => {
+    for (let i = from + 1; i < Math.min(sum.length, from + 4); i++) if (norm(sum[i][2]) === 'metric') return sum[i];
+    throw new Error('Cabeçalho "Metric" não encontrado em ' + where + ' da Summary');
+  };
+
+  // 1. Lojas e pedidos
   const s1h = findRow(sum, '1. Lojas e pedidos');
-  const pair = (label) => { const r = sum[findRow(sum, label, s1h)]; return { s: [3, 5, 7, 9].map((c) => num(r[c])), o: [4, 6, 8, 10].map((c) => num(r[c])) }; };
+  const s1H = metricHead(s1h, 'seção 1');
+  const s1S = colsOf(s1H, cityHeads((c) => c + ' – stores'), 'seção 1'); const s1O = colsOf(s1H, cityHeads((c) => c + ' – orders'), 'seção 1');
+  const pair = (label) => { const r = sum[findRow(sum, label, s1h)]; return { s: s1S.map((c) => num(r[c])), o: s1O.map((c) => num(r[c])) }; };
   const list = sum[findRow(sum, 'Merchant list', s1h)];
   const s1 = {
-    stores: [3, 5, 7, 9].map((c) => num(list[c])), orders: [4, 6, 8, 10].map((c) => num(list[c])),
+    stores: s1S.map((c) => num(list[c])), orders: s1O.map((c) => num(list[c])),
     noAnswer: pair('Merchants without answer or deprioritized'), pending: pair('Merchants pending answer'),
     known: pair('Merchants with PDV known by us'), integrated: pair('Already integrated with Keeta'), gap: pair('Pending integration'),
   };
 
-  // 2. PDVs e pedidos pendentes: D/F/H/J = quantidade, E/G/I/K = % dos pedidos pendentes
+  // 2. PDVs e pedidos pendentes: "Total", "X"... = quantidade; "Total – % of pending orders"... = % dos pedidos pendentes
   const s2h = findRow(sum, '2. PDVs e pedidos pendentes');
-  const cnt = (label) => [3, 5, 7, 9].map((c) => num(sum[findRow(sum, label, s2h)][c]));
-  const np = (label) => { const r = sum[findRow(sum, label, s2h)]; return { n: [3, 5, 7, 9].map((c) => num(r[c])), p: [4, 6, 8, 10].map((c) => num(r[c])) }; };
+  const s2H = metricHead(s2h, 'seção 2');
+  const s2N = colsOf(s2H, cityHeads((c) => c), 'seção 2'); const s2P = colsOf(s2H, cityHeads((c) => c + ' – % of pending orders'), 'seção 2');
+  const cnt = (label) => s2N.map((c) => num(sum[findRow(sum, label, s2h)][c]));
+  const np = (label) => { const r = sum[findRow(sum, label, s2h)]; return { n: s2N.map((c) => num(r[c])), p: s2P.map((c) => num(r[c])) }; };
   const s2 = {
     mapped: cnt('Total mapped PDVs'), integrated: cnt('Integrated with Keeta'), pending: cnt('Pending integration'),
     top80: cnt('PDVs covering 80% of pending orders'), willing: np('Willing to cooperate now'), unwilling: np('Unwilling to cooperate'),
   };
 
-  // Pending integration por segmento (coluna Segment da gap list)
+  // Pending integration por segmento (coluna Segment da gap list); posição 0 = soma das cidades
   const gapBreak = {};
+  const tot = (a) => a.reduce((x, y) => x + y, 0);
   ['SKA', 'SMB'].forEach((seg) => {
     const g = gap.filter((x) => x.seg === seg);
-    const m = [0, 1, 2, 3].map((i) => (i === 0 ? g.reduce((a, x) => a + x.m[0] + x.m[1] + x.m[2], 0) : g.reduce((a, x) => a + x.m[i - 1], 0)));
-    const o = [0, 1, 2, 3].map((i) => (i === 0 ? g.reduce((a, x) => a + x.o[0] + x.o[1] + x.o[2], 0) : g.reduce((a, x) => a + x.o[i - 1], 0)));
+    const m = seq(NC).map((i) => g.reduce((a, x) => a + (i === 0 ? tot(x.m) : x.m[i - 1]), 0));
+    const o = seq(NC).map((i) => g.reduce((a, x) => a + (i === 0 ? tot(x.o) : x.o[i - 1]), 0));
     gapBreak[seg.toLowerCase()] = { s: m.map((v, i) => r1(100 * v / (exec.merchants[i] || 1))), o: o.map((v, i) => r1(100 * v / (exec.orders[i] || 1))) };
   });
 
@@ -143,7 +174,7 @@ function buildOkr() {
   const outOfGap = (p) => selfBuilt(p) || notPosSet.has(p); // ordering tool ou self-built
   const lh = sheet('Local Heroes vs Classic SKA').getDataRange().getDisplayValues();
   const lhHead = lh.findIndex((r) => norm(r[0]) === 'city' && norm(r[1]) === 'brand' && norm(r[2]).indexOf('class') === 0);
-  const z = () => [0, 0, 0, 0];
+  const z = () => seq(NC).map(() => 0);
   const cls = {};
   // Marcas por segmento e cidade (battlecard). Coluna I "POS found (Tracker)", coluna J "On integrated POS?":
   // integrada = J tem Yes; PDV desconhecido = I vazio ou "Not Mapped"; fora do gap = todos os sistemas de I são
@@ -194,24 +225,29 @@ function buildOkr() {
     });
   });
   const noAnswerBreak = {};
-  BRK.forEach((k) => { noAnswerBreak[k] = { s: [0, 1, 2, 3].map((j) => r1(100 * bN[k][j] / (totN[j] || 1))), o: [0, 1, 2, 3].map((j) => r1(100 * bO[k][j] / (totO[j] || 1))) }; });
+  BRK.forEach((k) => { noAnswerBreak[k] = { s: seq(NC).map((j) => r1(100 * bN[k][j] / (totN[j] || 1))), o: seq(NC).map((j) => r1(100 * bO[k][j] / (totO[j] || 1))) }; });
   s1.noAnswerBreak = noAnswerBreak;
   s1.gapBreak = gapBreak;
   // Battlecard: lojas, integradas e % de pedidos integrados vêm da seção "3. SKA Classic, Local Heroes e SMB" da Summary.
   // O % de pedidos em printer não está na Summary: usa a linha de printer da seção se existir, senão calcula pelo Tracker.
   const s3h = sum.findIndex((r) => norm(r[2]).indexOf('3. ska classic') === 0);
+  let s3S = null; let s3O = null;
+  if (s3h >= 0) {
+    const s3H = metricHead(s3h, 'seção 3');
+    s3S = colsOf(s3H, cityHeads((c) => c + ' – stores'), 'seção 3'); s3O = colsOf(s3H, cityHeads((c) => c + ' – orders'), 'seção 3');
+  }
   const seg4 = {};
   SEG.forEach((k) => {
     const d = sg[k];
-    const calcPrinter = [0, 1, 2, 3].map((j) => (d.o[j] ? r1(100 * d.pO[j] / d.o[j]) : 0));
+    const calcPrinter = seq(NC).map((j) => (d.o[j] ? r1(100 * d.pO[j] / d.o[j]) : 0));
     let stores = d.n; let intStores = d.iN;
-    let intPct = [0, 1, 2, 3].map((j) => (d.o[j] ? r1(100 * d.iO[j] / d.o[j]) : 0));
+    let intPct = seq(NC).map((j) => (d.o[j] ? r1(100 * d.iO[j] / d.o[j]) : 0));
     let printerPct = calcPrinter;
     if (s3h >= 0) {
       const name = { ska: 'SKA Classic', lh: 'Local Heroes', smb: 'SMB' }[k];
       let i; try { i = findRow(sum, name + ' merchant list', s3h); } catch (e) { i = findRow(sum, name + ' brand list', s3h); }
-      const S = (row) => [3, 5, 7, 9].map((c) => num(sum[row][c]));
-      const O = (row) => [4, 6, 8, 10].map((c) => num(sum[row][c]));
+      const S = (row) => s3S.map((c) => num(sum[row][c]));
+      const O = (row) => s3O.map((c) => num(sum[row][c]));
       stores = S(i); intStores = S(i + 1); intPct = O(i + 2);
       for (let j = i + 1; j <= i + 5 && j < sum.length; j++) if (/printer/.test(norm(sum[j][2]))) { printerPct = O(j); break; }
     }
@@ -228,6 +264,7 @@ function buildOkr() {
     sentAt: new Date().toISOString(),
     source: ss.getUrl() + '#gid=' + sheet('Summary').getSheetId(),
     kr: { target: 70, citiesTotal: 5 },
+    cities: ['Total'].concat(CITY_TAGS.map((c) => c.toUpperCase())),
     exec, gap, s1, s2,
     s4: { target: 50, seg: seg4 },
   };
