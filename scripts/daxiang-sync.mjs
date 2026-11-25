@@ -58,6 +58,64 @@ function search(from, to) {
   return all;
 }
 
+// Detalhe de um evento; null se o Daxiang diz que ele não existe
+function detail(id) {
+  for (let tryN = 1; ; tryN++) {
+    let out;
+    try { out = execFileSync(OA, ['calendar-mcp', 'querySchedule', '--scheduleId', id, '--mis', MIS, '--raw'], { encoding: 'utf8', shell: true, timeout: 120_000, stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (e) { out = String(e.stdout || ''); }
+    const i = out.indexOf('{');
+    const j = i >= 0 ? (() => { try { return JSON.parse(out.slice(i)); } catch { return null; } })() : null;
+    if (j?.status?.code === 0) return j.detail;
+    if (j?.status?.code === 2732001) return null; // 该日程不存在
+    if (tryN >= 3) throw new Error(`Daxiang (detalhe ${id}): ${j?.status?.msg || 'erro'}`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000 * tryN);
+  }
+}
+
+// A busca do Daxiang erra o dia de algumas séries recorrentes (calcula o dia da semana no fuso da China:
+// "Irlan & Bea", quarta 14h em Brasília, vinha como terça). Confere uma ocorrência de cada série;
+// se ela não existe, acha o deslocamento certo (±1 dia), corrige todas e recupera a 1ª ocorrência,
+// que a busca omite quando a data errada cai antes do início da série.
+const CN = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
+const cnMidnight = (ms) => Date.parse(`${CN.format(new Date(ms))}T00:00:00+08:00`) / 1000;
+function fixRecurring(list) {
+  const series = new Map();
+  for (const e of list) {
+    const [sid, suf] = String(e.eventId).split('_');
+    if (!suf || !/^\d+$/.test(suf) || PESSOAL.test(e.title || '')) continue;
+    if (!series.has(sid)) series.set(sid, []);
+    series.get(sid).push(e);
+  }
+  const shiftId = (id, days) => { const [sid, suf] = id.split('_'); return `${sid}_${+suf + days * 86400}`; };
+  // Ocorrência gerada pela regra: o código termina na meia-noite (China) do dia em que ela começa.
+  // As que não seguem isso foram movidas à mão e já vêm certas.
+  const generated = (e) => +String(e.eventId).split('_')[1] === cnMidnight(e.startTime);
+  const moved = new Set(list.filter((e) => !generated(e)).map((e) => e.eventId));
+  const extra = [];
+  const drop = new Set();
+  for (const [sid, evs] of series) {
+    const gen = evs.filter(generated).sort((a, b) => a.startTime - b.startTime);
+    // o erro só acontece quando o dia na China é outro (reuniões a partir das 13h de Brasília)
+    if (!gen.some((e) => local(new Date(e.startTime)).slice(0, 10) !== CN.format(new Date(e.startTime)))) continue;
+    const probe = gen.find((e) => e.startTime > Date.now()) || gen[gen.length - 1];
+    if (detail(probe.eventId)) continue; // dia certo
+    const days = [1, -1].find((d) => detail(shiftId(probe.eventId, d)));
+    if (!days) { log(`aviso: não achei o dia certo da série "${probe.title}" (${sid})`); continue; }
+    for (const e of gen) {
+      const id = shiftId(e.eventId, days);
+      if (moved.has(id)) { drop.add(e); continue; } // essa ocorrência foi movida e já veio na busca
+      e.eventId = id; e.startTime += days * 864e5; e.endTime += days * 864e5;
+    }
+    const first = detail(sid);
+    if (first?.scheduleId && !list.some((e) => e.eventId === first.scheduleId)) {
+      extra.push({ ...gen[0], eventId: first.scheduleId, startTime: first.startTime, endTime: first.endTime });
+    }
+    log(`corrigido: série "${probe.title}" vinha ${days > 0 ? '1 dia antes' : '1 dia depois'} na busca`);
+  }
+  return list.filter((e) => !drop.has(e)).concat(extra);
+}
+
 // --login: faz uma consulta com a janela "ligada" ao terminal, para o login da empresa (SSO) aparecer e ser concluído
 function interactiveLogin() {
   console.log('\nConectando ao Daxiang (se pedir login da empresa, siga as instruções abaixo)...\n');
@@ -82,9 +140,12 @@ async function main() {
   }
   // Janela "confiável": 1 dia de margem nas pontas (fora dela o app não apaga nada)
   const from = new Date(+qFrom + 864e5), to = new Date(+qTo - 864e5);
+  const uniq = new Map();
+  for (const e of raw) if (!uniq.has(e.eventId)) uniq.set(e.eventId, e);
+  const fixed = fixRecurring([...uniq.values()]);
   const seen = new Set();
   const events = [];
-  for (const e of raw) {
+  for (const e of fixed) {
     if (seen.has(e.eventId)) continue; seen.add(e.eventId);
     if (PESSOAL.test(e.title || '')) continue;
     const s = new Date(e.startTime);
