@@ -147,7 +147,6 @@ function StoresSection({ s1, kr }) {
   const D = discovery(s1);
   const discO = (i) => D.disc.o[i];
   const avg3 = CI.reduce((a, i) => a + discO(i), 0) / CI.length;
-  const below = CI.filter((i) => discO(i) < target);
   const ordersParts = (i) => ['integrated', 'gap', 'printer', 'nonPos', 'pending', 'noAnswer'].map((k) => {
     const v = D[k].o[i];
     return { v, cls: ST[k].cls, label: ST[k].label, text: `${p1(v)} of est. orders · ≈ ${n0(s1.orders[i] * v / 100)} orders/day` };
@@ -178,11 +177,6 @@ function StoresSection({ s1, kr }) {
           <span class="kr-meta"><${Status} ok=${avg3 >= target}>${avg3 >= target ? 'Above target' : `${(target - avg3).toFixed(1)} pts below target`}<//><span class="muted small">Average of ${cityList()} (${CI.length} of ${kr?.citiesTotal || 5} KR cities) · target ${target}%</span></span>
         </div>
       </div>
-      <p class=${`kr-call ${below.length ? 'is-bad' : 'is-ok'}`}><${Icon} n=${below.length ? 'alert' : 'check'} s=${15} />
-        <span>${below.length
-          ? html`To reach ${target}%, more est. orders/day need discovery: ${below.map((i, j) => html`${j ? ' · ' : ''}<b>${CITIES[i]}</b> ≈ ${n0((target - discO(i)) * s1.orders[i] / 100)}`)}`
-          : `All ${CI.length} cities are at or above the ${target}% target.`}</span>
-      </p>
       <${Legend} groups=${[{ title: 'Discovered', items: [ST.integrated, ST.gap, ST.printer, ST.nonPos] }, { title: 'Not discovered', items: [ST.pending, ST.noAnswer] }]} />
       <div class="kr-rows">
         <div class="kr-scale" aria-hidden="true"><span></span><span class="kr-ticks"><i style="left:0">0%</i><i class="t" style=${`left:${target}%`}>Target ${target}%</i><i style="left:100%">100%</i></span><span></span></div>
