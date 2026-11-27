@@ -240,8 +240,6 @@ function PdvSection({ s2, d, e, u }) {
 
     <div class="ok-card">
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
-      ${s2.willing.n[0] > 0 && html`<p class="pdv-win"><i class="v-good-hatch" aria-hidden="true"></i>
-        <span><b>Quick win:</b> ${s2.willing.n[0]} willing PDV${s2.willing.n[0] === 1 ? '' : 's'} already hold ${p1(s2.willing.p[0])} of pending orders.</span></p>`}
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
       <div class="kr-row pdv pdv-head" aria-hidden="true"><span></span><span class="muted small">PDVs</span><span class="muted small">Pending orders</span></div>
       ${[...CI, 0].map((i, j) => html`<div class=${`kr-row pdv ${i === 0 ? 'total' : ''}`} style=${`--i:${j}`}>
