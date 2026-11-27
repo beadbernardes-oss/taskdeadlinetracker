@@ -675,10 +675,6 @@ details summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
 .kr-num { font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .kr-num.is-ok { color: var(--ok); } .kr-num.is-bad { color: var(--p0-text); }
 .kr-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.kr-call { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin: 12px 0 4px; padding: 9px 12px; border-radius: 9px; }
-.kr-call .ic { flex: none; margin-top: 1px; }
-.kr-call.is-bad { background: var(--danger-soft); color: var(--p0-text); } .kr-call.is-ok { background: var(--ok-soft); color: var(--ok); }
-.kr-call b { font-weight: 700; }
 .kr-rows { margin-top: 4px; }
 .kr-scale { display: grid; grid-template-columns: 150px minmax(0, 1fr) 230px; gap: 12px; padding: 0 8px; height: 18px; }
 .kr-ticks { position: relative; font-size: 11px; color: var(--muted); }

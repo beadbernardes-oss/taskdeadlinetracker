@@ -240,10 +240,6 @@ function PdvSection({ s2, d, e, u }) {
 
     <div class="ok-card">
       <h3>Mapped PDVs: integration status and willingness to cooperate</h3>
-      <p class="kr-call is-bad"><${Icon} n="alert" s=${15} />
-        <span><b>${p1(s2.unwilling.p[0])} of pending orders sit with ${s2.unwilling.n[0]} unwilling PDVs.</b>
-          ${[...CI].reverse().map((i, j) => html`${j ? ' · ' : ' '}${CITIES[i]}: ${p1(s2.unwilling.p[i])}`)}.</span>
-      </p>
       ${s2.willing.n[0] > 0 && html`<p class="pdv-win"><i class="v-good-hatch" aria-hidden="true"></i>
         <span><b>Quick win:</b> ${s2.willing.n[0]} willing PDV${s2.willing.n[0] === 1 ? '' : 's'} already hold ${p1(s2.willing.p[0])} of pending orders.</span></p>`}
       <${Legend} groups=${[{ items: [PDV.integrated] }, { title: 'Pending integration', items: [WL.willing, WL.unwilling] }]} />
